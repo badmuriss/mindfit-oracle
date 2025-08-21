@@ -31,7 +31,7 @@ public class User implements UserDetails {
     
     private String profile;
     
-    private LocalDateTime lastLogOnDate;
+    private LocalDateTime lastLogonDate;
     
     @CreatedDate
     private LocalDateTime createdAt;

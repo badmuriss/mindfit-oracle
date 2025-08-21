@@ -4,6 +4,7 @@ import com.mindfit.api.model.User;
 import com.mindfit.api.dto.UserCreateRequest;
 import com.mindfit.api.dto.UserDto;
 import com.mindfit.api.dto.UserResponse;
+import com.mindfit.api.dto.UserDetailResponse;
 import com.mindfit.api.dto.UserUpdateRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -36,6 +37,10 @@ public interface UserMapper {
     UserResponse toResponse(User user);
 
     UserResponse toResponse(UserDto dto);
+
+    UserDetailResponse toDetailResponse(User user);
+
+    UserDetailResponse toDetailResponse(UserDto dto);
 
     @Mapping(target = "password", source = "password")
     UserDto toDto(User user);

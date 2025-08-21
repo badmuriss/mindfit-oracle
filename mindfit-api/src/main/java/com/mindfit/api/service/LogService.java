@@ -2,6 +2,7 @@ package com.mindfit.api.service;
 
 import com.mindfit.api.common.exception.ResourceNotFoundException;
 import com.mindfit.api.common.exception.UnauthorizedException;
+import com.mindfit.api.common.exception.BadRequestException;
 import com.mindfit.api.dto.LogCreateRequest;
 import com.mindfit.api.dto.LogDto;
 import com.mindfit.api.enums.LogType;
@@ -25,12 +26,62 @@ public class LogService {
     private final LogMapper logMapper;
 
     public Page<LogDto> findAll(Pageable pageable) {
+        return findAll(null, null, pageable);
+    }
+
+    public Page<LogDto> findAll(String startDate, String endDate, Pageable pageable) {
+        return findAll(startDate, endDate, null, null, pageable);
+    }
+
+    public Page<LogDto> findAll(String startDate, String endDate, String type, String category, Pageable pageable) {
         if (!SecurityUtil.isAdmin()) {
             throw new UnauthorizedException("Only admins can view logs");
         }
-        
-        return logRepository.findAll(pageable)
-                .map(logMapper::toDto);
+
+        LogType logType = null;
+        if (type != null && !type.isBlank()) {
+            try {
+                logType = LogType.valueOf(type.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new BadRequestException("Invalid log type: " + type + ". Valid: ERROR, WARNING, INFO");
+            }
+        }
+
+        boolean hasDates = startDate != null && endDate != null;
+        if (hasDates) {
+            LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+            LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+
+            if (logType != null && category != null && !category.isBlank()) {
+                return logRepository.findByTypeAndCategoryAndTimestampBetween(logType, category, start, end, pageable)
+                        .map(logMapper::toDto);
+            }
+            if (logType != null) {
+                return logRepository.findByTypeAndTimestampBetween(logType, start, end, pageable)
+                        .map(logMapper::toDto);
+            }
+            if (category != null && !category.isBlank()) {
+                return logRepository.findByCategoryAndTimestampBetween(category, start, end, pageable)
+                        .map(logMapper::toDto);
+            }
+            return logRepository.findByTimestampBetween(start, end, pageable)
+                    .map(logMapper::toDto);
+        }
+
+        if (logType != null && category != null && !category.isBlank()) {
+            return logRepository.findByTypeAndCategory(logType, category, pageable)
+                    .map(logMapper::toDto);
+        }
+        if (logType != null) {
+            return logRepository.findByType(logType, pageable)
+                    .map(logMapper::toDto);
+        }
+        if (category != null && !category.isBlank()) {
+            return logRepository.findByCategory(category, pageable)
+                    .map(logMapper::toDto);
+        }
+
+        return logRepository.findAll(pageable).map(logMapper::toDto);
     }
 
     public LogDto findById(String id) {

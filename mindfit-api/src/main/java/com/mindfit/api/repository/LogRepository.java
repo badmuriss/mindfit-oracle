@@ -17,4 +17,12 @@ public interface LogRepository extends MongoRepository<Log, String> {
     Page<Log> findByCategory(String category, Pageable pageable);
     
     Page<Log> findByTimestampBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
+
+    Page<Log> findByTypeAndCategory(LogType type, String category, Pageable pageable);
+
+    Page<Log> findByTypeAndTimestampBetween(LogType type, LocalDateTime start, LocalDateTime end, Pageable pageable);
+
+    Page<Log> findByCategoryAndTimestampBetween(String category, LocalDateTime start, LocalDateTime end, Pageable pageable);
+
+    Page<Log> findByTypeAndCategoryAndTimestampBetween(LogType type, String category, LocalDateTime start, LocalDateTime end, Pageable pageable);
 }

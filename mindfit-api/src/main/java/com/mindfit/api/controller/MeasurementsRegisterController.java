@@ -16,7 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/{userId}/measurements")
+@RequestMapping("/users/{userId}/measurements")
 @RequiredArgsConstructor
 @Tag(name = "Measurements Registers", description = "Measurements register management API")
 @SecurityRequirement(name = "bearerAuth")

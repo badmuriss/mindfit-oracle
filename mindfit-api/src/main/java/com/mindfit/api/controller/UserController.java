@@ -1,8 +1,6 @@
 package com.mindfit.api.controller;
 
-import com.mindfit.api.dto.UserCreateRequest;
-import com.mindfit.api.dto.UserResponse;
-import com.mindfit.api.dto.UserUpdateRequest;
+import com.mindfit.api.dto.*;
 import com.mindfit.api.service.UserService;
 import com.mindfit.api.service.ProfileGenerationService;
 import com.mindfit.api.mapper.UserMapper;
@@ -36,15 +34,8 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user by ID")
-    public UserResponse getUserById(@PathVariable String id) {
-        return userMapper.toResponse(userService.findById(id));
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create new user")
-    public UserResponse createUser(@Valid @RequestBody UserCreateRequest request) {
-        return userMapper.toResponse(userService.create(request));
+    public UserDetailResponse getUserById(@PathVariable String id) {
+        return userMapper.toDetailResponse(userService.findById(id));
     }
 
     @PutMapping("/{id}")
@@ -64,9 +55,9 @@ public class UserController {
     
     @PostMapping("/{id}/generate-profile")
     @Operation(summary = "Generate user profile based on their activity data")
-    public String generateUserProfile(@PathVariable String id) {
+    public UserProfileResponse generateUserProfile(@PathVariable String id) {
         String profile = profileGenerationService.generateUserProfile(id);
         profileGenerationService.updateUserProfile(id, profile);
-        return profile;
+        return new UserProfileResponse(profile);
     }
 }

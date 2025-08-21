@@ -12,6 +12,6 @@ public record UserDto(
         String password,
         Set<Role> roles,
         String profile,
-        LocalDateTime lastLogOnDate,
+        LocalDateTime lastLogonDate,
         LocalDateTime createdAt
 ) {}

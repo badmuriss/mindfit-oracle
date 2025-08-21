@@ -82,33 +82,35 @@ The API is available at `http://localhost:8080/` by default.
 - `DELETE /users/{id}` - Delete user
 
 ### Meal Registers
-- `GET /{userId}/meals` - List user's meals
-- `GET /{userId}/meals/{id}` - Get meal by ID
-- `POST /{userId}/meals` - Create meal
-- `PUT /{userId}/meals/{id}` - Update meal
-- `DELETE /{userId}/meals/{id}` - Delete meal
+- `GET /users/{userId}/meals` - List user's meals
+- `GET /users/{userId}/meals/{id}` - Get meal by ID
+- `POST /users/{userId}/meals` - Create meal
+- `PUT /users/{userId}/meals/{id}` - Update meal
+- `DELETE /users/{userId}/meals/{id}` - Delete meal
 
 ### Exercise Registers
-- `GET /{userId}/exercises` - List user's exercises
-- `GET /{userId}/exercises/{id}` - Get exercise by ID
-- `POST /{userId}/exercises` - Create exercise
-- `PUT /{userId}/exercises/{id}` - Update exercise
-- `DELETE /{userId}/exercises/{id}` - Delete exercise
+- `GET /users/{userId}/exercises` - List user's exercises
+- `GET /users/{userId}/exercises/{id}` - Get exercise by ID
+- `POST /users/{userId}/exercises` - Create exercise
+- `PUT /users/{userId}/exercises/{id}` - Update exercise
+- `DELETE /users/{userId}/exercises/{id}` - Delete exercise
 
 ### Measurements Registers
-- `GET /{userId}/measurements` - List user's measurements
-- `GET /{userId}/measurements/{id}` - Get measurement by ID
-- `POST /{userId}/measurements` - Create measurement
-- `PUT /{userId}/measurements/{id}` - Update measurement
-- `DELETE /{userId}/measurements/{id}` - Delete measurement
+- `GET /users/{userId}/measurements` - List user's measurements
+- `GET /users/{userId}/measurements/{id}` - Get measurement by ID
+- `POST /users/{userId}/measurements` - Create measurement
+- `PUT /users/{userId}/measurements/{id}` - Update measurement
+- `DELETE /users/{userId}/measurements/{id}` - Delete measurement
 
 ### Logs (Admin only)
 - `GET /logs` - List all logs
+  - Optional filters: `startDate`, `endDate` as `YYYY-MM-DD`, `type` (ERROR|WARNING|INFO), `category` (string)
 - `GET /logs/{id}` - Get log by ID
 - `POST /logs` - Create log
 
 ### Chatbot (Rate limited: 20 req/min)
-- `POST /chatbot` - Chat with AI assistant
+- `POST /users/{userId}/chatbot` - Chat with AI assistant
+- `DELETE /users/{userId}/chatbot/history` - Clear chatbot history
 
 ## Authentication
 
@@ -144,7 +146,7 @@ All GET endpoints support pagination with query parameters:
 Response format:
 ```json
 {
-  "items": [...],
+  "items": [],
   "page": 0,
   "size": 20,
   "total": 100

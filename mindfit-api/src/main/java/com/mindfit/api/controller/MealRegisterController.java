@@ -16,7 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/{userId}/meals")
+@RequestMapping("/users/{userId}/meals")
 @RequiredArgsConstructor
 @Tag(name = "Meal Registers", description = "Meal register management API")
 @SecurityRequirement(name = "bearerAuth")

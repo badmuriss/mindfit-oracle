@@ -1,6 +1,7 @@
 package com.mindfit.api.controller;
 
 import com.mindfit.api.enums.Role;
+import com.mindfit.api.common.exception.UnauthorizedException;
 import com.mindfit.api.dto.ChatRequest;
 import com.mindfit.api.dto.ChatResponse;
 import com.mindfit.api.service.ChatbotService;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/chatbot")
+@RequestMapping("/users/{userId}/chatbot")
 @RequiredArgsConstructor
 @Tag(name = "Chatbot", description = "Chatbot API")
 @SecurityRequirement(name = "bearerAuth")
@@ -30,9 +31,14 @@ public class ChatbotController {
     @PostMapping
     @Operation(summary = "Chat with AI assistant")
     public ChatResponse chat(
+            @PathVariable String userId,
             @Valid @RequestBody ChatRequest request) {
-        
-        Bucket bucket = rateLimitService.createBucketForUser(SecurityUtil.getCurrentUserId());
+
+        if (!SecurityUtil.isAdmin() && !userId.equals(SecurityUtil.getCurrentUserId())) {
+            throw new UnauthorizedException("Users can only access their own chatbot");
+        }
+
+        Bucket bucket = rateLimitService.createBucketForUser(userId);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
         
         if (!probe.isConsumed()) {
@@ -41,13 +47,15 @@ public class ChatbotController {
                     "Rate limit exceeded. Try again in " + probe.getNanosToWaitForRefill() / 1_000_000_000 + " seconds"
             );
         }
-        
-        return chatbotService.chat(SecurityUtil.getCurrentUserId(), request);
+        return chatbotService.chat(userId, request);
     }
 
     @DeleteMapping("/history")
-    @Operation(summary = "Clear current user's chatbot history")
-    public void clearHistory() {
-        chatbotService.clearHistory(SecurityUtil.getCurrentUserId());
+    @Operation(summary = "Clear user's chatbot history")
+    public void clearHistory(@PathVariable String userId) {
+        if (!SecurityUtil.isAdmin() && !userId.equals(SecurityUtil.getCurrentUserId())) {
+            throw new UnauthorizedException("Users can only clear their own chatbot history");
+        }
+        chatbotService.clearHistory(userId);
     }
 }

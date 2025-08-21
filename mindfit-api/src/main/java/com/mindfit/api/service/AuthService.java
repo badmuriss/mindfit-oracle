@@ -40,7 +40,7 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoles());
         
         // Update last login date and potentially generate profile
-        updateLastLogOnDate(user);
+        updateLastLogonDate(user);
         
         return JwtResponse.of(token, user.getId(), user.getEmail(), user.getRoles());
     }
@@ -93,9 +93,9 @@ public class AuthService {
         return JwtResponse.of(token, user.getId(), user.getEmail(), user.getRoles());
     }
     
-    private void updateLastLogOnDate(User user) {
+    private void updateLastLogonDate(User user) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime lastLogOn = user.getLastLogOnDate();
+        LocalDateTime lastLogOn = user.getLastLogonDate();
         
         // Check if this is first login this week
         if (isFirstLoginThisWeek(lastLogOn, now)) {
@@ -108,7 +108,7 @@ public class AuthService {
             }
         }
         
-        user.setLastLogOnDate(now);
+        user.setLastLogonDate(now);
         userRepository.save(user);
     }
     

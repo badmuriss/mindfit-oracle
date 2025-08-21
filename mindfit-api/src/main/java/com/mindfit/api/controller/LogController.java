@@ -27,9 +27,13 @@ public class LogController {
     @GetMapping
     @Operation(summary = "Get all logs (Admin only)")
     public Page<LogResponse> getAllLogs(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String category,
             Pageable pageable) {
-        
-        return logService.findAll(pageable)
+
+        return logService.findAll(startDate, endDate, type, category, pageable)
                 .map(logMapper::toResponse);
     }
 
