@@ -32,17 +32,16 @@ public class ExerciseRegisterController {
             Pageable pageable) {
         
         return exerciseRegisterService.findByUserId(userId, pageable)
-                .map(exerciseRegisterMapper::toEntity)
                 .map(exerciseRegisterMapper::toResponse);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get exercise register by ID")
     public ExerciseRegisterResponse getExerciseRegisterById(
+            @PathVariable String userId,
             @PathVariable String id) {
-        
-        var exerciseRegisterDto = exerciseRegisterService.findById(id);
-        return exerciseRegisterMapper.toResponse(exerciseRegisterMapper.toEntity(exerciseRegisterDto));
+
+        return exerciseRegisterMapper.toResponse(exerciseRegisterService.findById(id));
     }
 
     @PostMapping
@@ -51,25 +50,25 @@ public class ExerciseRegisterController {
     public ExerciseRegisterResponse createExerciseRegister(
             @PathVariable String userId,
             @Valid @RequestBody ExerciseRegisterCreateRequest request) {
-        
-        var exerciseRegisterDto = exerciseRegisterService.create(userId, request);
-        return exerciseRegisterMapper.toResponse(exerciseRegisterMapper.toEntity(exerciseRegisterDto));
+
+        return exerciseRegisterMapper.toResponse(exerciseRegisterService.create(userId, request));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update exercise register")
     public ExerciseRegisterResponse updateExerciseRegister(
+            @PathVariable String userId,
             @PathVariable String id,
             @Valid @RequestBody ExerciseRegisterUpdateRequest request) {
-        
-        var exerciseRegisterDto = exerciseRegisterService.update(id, request);
-        return exerciseRegisterMapper.toResponse(exerciseRegisterMapper.toEntity(exerciseRegisterDto));
+
+        return exerciseRegisterMapper.toResponse(exerciseRegisterService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete exercise register")
     public void deleteExerciseRegister(
+            @PathVariable String userId,
             @PathVariable String id) {
         
         exerciseRegisterService.delete(id);

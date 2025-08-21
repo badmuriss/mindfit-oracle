@@ -29,23 +29,20 @@ public class UserController {
     @Operation(summary = "Get all users")
     public Page<UserResponse> getAllUsers(Pageable pageable) {
         return userService.findAll(pageable)
-                .map(userMapper::toEntity)
                 .map(userMapper::toResponse);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user by ID")
     public UserResponse getUserById(@PathVariable String id) {
-        var userDto = userService.findById(id);
-        return userMapper.toResponse(userMapper.toEntity(userDto));
+        return userMapper.toResponse(userService.findById(id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create new user")
     public UserResponse createUser(@Valid @RequestBody UserCreateRequest request) {
-        var userDto = userService.create(request);
-        return userMapper.toResponse(userMapper.toEntity(userDto));
+        return userMapper.toResponse(userService.create(request));
     }
 
     @PutMapping("/{id}")
@@ -53,8 +50,7 @@ public class UserController {
     public UserResponse updateUser(
             @PathVariable String id,
             @Valid @RequestBody UserUpdateRequest request) {
-        var userDto = userService.update(id, request);
-        return userMapper.toResponse(userMapper.toEntity(userDto));
+        return userMapper.toResponse(userService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

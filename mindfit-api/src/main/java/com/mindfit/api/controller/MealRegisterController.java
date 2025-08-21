@@ -32,15 +32,15 @@ public class MealRegisterController {
             Pageable pageable) {
         
         return mealRegisterService.findByUserId(userId, pageable)
-                .map(mealRegisterMapper::toEntity)
                 .map(mealRegisterMapper::toResponse);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get meal register by ID")
-    public MealRegisterResponse getMealRegisterById(@PathVariable String id) {
-        var mealRegisterDto = mealRegisterService.findById(id);
-        return mealRegisterMapper.toResponse(mealRegisterMapper.toEntity(mealRegisterDto));
+    public MealRegisterResponse getMealRegisterById(
+            @PathVariable String userId,
+            @PathVariable String id) {
+        return mealRegisterMapper.toResponse(mealRegisterService.findById(id));
     }
 
     @PostMapping
@@ -49,25 +49,26 @@ public class MealRegisterController {
     public MealRegisterResponse createMealRegister(
             @PathVariable String userId,
             @Valid @RequestBody MealRegisterCreateRequest request) {
-        
-        var mealRegisterDto = mealRegisterService.create(userId, request);
-        return mealRegisterMapper.toResponse(mealRegisterMapper.toEntity(mealRegisterDto));
+
+        return mealRegisterMapper.toResponse(mealRegisterService.create(userId, request));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update meal register")
     public MealRegisterResponse updateMealRegister(
+            @PathVariable String userId,
             @PathVariable String id,
             @Valid @RequestBody MealRegisterUpdateRequest request) {
-        
-        var mealRegisterDto = mealRegisterService.update(id, request);
-        return mealRegisterMapper.toResponse(mealRegisterMapper.toEntity(mealRegisterDto));
+
+        return mealRegisterMapper.toResponse(mealRegisterService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete meal register")
-    public void deleteMealRegister(@PathVariable String id) {
+    public void deleteMealRegister(
+            @PathVariable String userId,
+            @PathVariable String id) {
         mealRegisterService.delete(id);
     }
 }

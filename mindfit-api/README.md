@@ -59,18 +59,20 @@ OPENAI_API_KEY=your-openai-api-key
 mvn spring-boot:run
 ```
 
-The API will be available at `http://localhost:8080/api/v1`
+The API is available at `http://localhost:8080/` by default.
 
 ### 4. Access API Documentation
 
-- Swagger UI: `http://localhost:8080/api/v1/swagger-ui.html`
-- API Docs: `http://localhost:8080/api/v1/api-docs`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- API Docs: `http://localhost:8080/api-docs`
 
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/user` - User login
-- `POST /auth/admin` - Admin login
+- `POST /auth/user/login` - User login
+- `POST /auth/user/signup` - User signup
+- `POST /auth/admin/login` - Admin login
+- `POST /auth/admin/signup` - Admin signup (requires SUPER_ADMIN)
 
 ### Users (Admin only for creation, users can manage their own)
 - `GET /users` - List all users (Admin only)

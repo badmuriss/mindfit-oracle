@@ -22,6 +22,8 @@ public interface MealRegisterMapper {
 
     MealRegisterResponse toResponse(MealRegister mealRegister);
 
+    MealRegisterResponse toResponse(MealRegisterDto dto);
+
     MealRegisterDto toDto(MealRegister mealRegister);
 
     MealRegister toEntity(MealRegisterDto dto);

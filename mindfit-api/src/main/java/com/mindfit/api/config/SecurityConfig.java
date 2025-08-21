@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/user/login", "/auth/user/signup").permitAll()
                         .requestMatchers("/auth/admin/login").hasRole("ADMIN")
                         .requestMatchers("/auth/admin/signup").hasRole("SUPER_ADMIN")
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/logs/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

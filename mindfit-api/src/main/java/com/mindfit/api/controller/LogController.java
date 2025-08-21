@@ -30,7 +30,6 @@ public class LogController {
             Pageable pageable) {
         
         return logService.findAll(pageable)
-                .map(logMapper::toEntity)
                 .map(logMapper::toResponse);
     }
 
@@ -38,9 +37,8 @@ public class LogController {
     @Operation(summary = "Get log by ID (Admin only)")
     public LogResponse getLogById(
             @PathVariable String id) {
-        
-        var logDto = logService.findById(id);
-        return logMapper.toResponse(logMapper.toEntity(logDto));
+
+        return logMapper.toResponse(logService.findById(id));
     }
 
     @PostMapping
@@ -48,8 +46,7 @@ public class LogController {
     @Operation(summary = "Create new log (Admin only)")
     public LogResponse createLog(
             @Valid @RequestBody LogCreateRequest request) {
-        
-        var logDto = logService.create(request);
-        return logMapper.toResponse(logMapper.toEntity(logDto));
-    }
+
+        return logMapper.toResponse(logService.create(request));
+}
 }

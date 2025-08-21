@@ -22,6 +22,8 @@ public interface ExerciseRegisterMapper {
 
     ExerciseRegisterResponse toResponse(ExerciseRegister exerciseRegister);
 
+    ExerciseRegisterResponse toResponse(ExerciseRegisterDto dto);
+
     ExerciseRegisterDto toDto(ExerciseRegister exerciseRegister);
 
     ExerciseRegister toEntity(ExerciseRegisterDto dto);

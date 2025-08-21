@@ -32,17 +32,16 @@ public class MeasurementsRegisterController {
             Pageable pageable) {
         
         return measurementsRegisterService.findByUserId(userId, pageable)
-                .map(measurementsRegisterMapper::toEntity)
                 .map(measurementsRegisterMapper::toResponse);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get measurements register by ID")
     public MeasurementsRegisterResponse getMeasurementsRegisterById(
+            @PathVariable String userId,
             @PathVariable String id) {
         
-        var measurementsRegisterDto = measurementsRegisterService.findById(id);
-        return measurementsRegisterMapper.toResponse(measurementsRegisterMapper.toEntity(measurementsRegisterDto));
+        return measurementsRegisterMapper.toResponse(measurementsRegisterService.findById(id));
     }
 
     @PostMapping
@@ -52,24 +51,24 @@ public class MeasurementsRegisterController {
             @PathVariable String userId,
             @Valid @RequestBody MeasurementsRegisterCreateRequest request) {
         
-        var measurementsRegisterDto = measurementsRegisterService.create(userId, request);
-        return measurementsRegisterMapper.toResponse(measurementsRegisterMapper.toEntity(measurementsRegisterDto));
+        return measurementsRegisterMapper.toResponse(measurementsRegisterService.create(userId, request));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update measurements register")
     public MeasurementsRegisterResponse updateMeasurementsRegister(
+            @PathVariable String userId,
             @PathVariable String id,
             @Valid @RequestBody MeasurementsRegisterUpdateRequest request) {
         
-        var measurementsRegisterDto = measurementsRegisterService.update(id, request);
-        return measurementsRegisterMapper.toResponse(measurementsRegisterMapper.toEntity(measurementsRegisterDto));
+        return measurementsRegisterMapper.toResponse(measurementsRegisterService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete measurements register")
     public void deleteMeasurementsRegister(
+            @PathVariable String userId,
             @PathVariable String id) {
         
         measurementsRegisterService.delete(id);

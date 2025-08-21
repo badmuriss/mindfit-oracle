@@ -35,6 +35,8 @@ public interface UserMapper {
 
     UserResponse toResponse(User user);
 
+    UserResponse toResponse(UserDto dto);
+
     @Mapping(target = "password", source = "password")
     UserDto toDto(User user);
 

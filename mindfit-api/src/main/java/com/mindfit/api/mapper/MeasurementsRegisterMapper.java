@@ -22,6 +22,8 @@ public interface MeasurementsRegisterMapper {
 
     MeasurementsRegisterResponse toResponse(MeasurementsRegister measurementsRegister);
 
+    MeasurementsRegisterResponse toResponse(MeasurementsRegisterDto dto);
+
     MeasurementsRegisterDto toDto(MeasurementsRegister measurementsRegister);
 
     MeasurementsRegister toEntity(MeasurementsRegisterDto dto);

@@ -15,6 +15,8 @@ public interface LogMapper {
 
     LogResponse toResponse(Log log);
 
+    LogResponse toResponse(LogDto dto);
+
     LogDto toDto(Log log);
 
     Log toEntity(LogDto dto);
