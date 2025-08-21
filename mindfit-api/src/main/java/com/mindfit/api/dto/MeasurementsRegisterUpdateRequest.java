@@ -6,10 +6,10 @@ import java.time.LocalDateTime;
 
 public record MeasurementsRegisterUpdateRequest(
         @Positive(message = "Weight must be positive")
-        Double weight,
+        Double weightInKG,
         
         @Positive(message = "Height must be positive")
-        Double height,
+        Integer heightInCM,
         
         LocalDateTime timestamp
 ) {}

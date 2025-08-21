@@ -33,14 +33,14 @@ spring:
       on-profile: production
   data:
     mongodb:
-      uri: ${MONGO_URI}
+      uri: ${MONGO_URI:mongodb://localhost:27017/mindfit}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
 
 app:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:secret}
     expiration-ms: 86400000
 
 logging:

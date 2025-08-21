@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class MeasurementsRegisterService {
@@ -21,7 +23,7 @@ public class MeasurementsRegisterService {
     private final MeasurementsRegisterRepository measurementsRegisterRepository;
     private final MeasurementsRegisterMapper measurementsRegisterMapper;
 
-    public Page<MeasurementsRegisterDto> findByUserId(String userId, Pageable pageable) {
+    public Page<MeasurementsRegisterDto> findByUserId(String userId, String startDate, String endDate, Pageable pageable) {
         String currentUserId = SecurityUtil.getCurrentUserId();
         boolean isAdmin = SecurityUtil.isAdmin();
         
@@ -29,8 +31,19 @@ public class MeasurementsRegisterService {
             throw new UnauthorizedException("Users can only view their own measurements registers");
         }
         
+        if (startDate != null && endDate != null) {
+            LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+            LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+            return measurementsRegisterRepository.findByUserIdAndTimestampBetween(userId, start, end, pageable)
+                    .map(measurementsRegisterMapper::toDto);
+        }
+        
         return measurementsRegisterRepository.findByUserId(userId, pageable)
                 .map(measurementsRegisterMapper::toDto);
+    }
+    
+    public Page<MeasurementsRegisterDto> findByUserId(String userId, Pageable pageable) {
+        return findByUserId(userId, null, null, pageable);
     }
 
     public MeasurementsRegisterDto findById(String id) {

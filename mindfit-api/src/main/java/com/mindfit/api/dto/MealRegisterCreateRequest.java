@@ -15,5 +15,14 @@ public record MealRegisterCreateRequest(
         
         @NotNull(message = "Calories is required")
         @Positive(message = "Calories must be positive")
-        Integer calories
+        Integer calories,
+        
+        @Positive(message = "Carbo must be positive")
+        Double carbo,
+        
+        @Positive(message = "Protein must be positive")
+        Double protein,
+        
+        @Positive(message = "Fat must be positive")
+        Double fat
 ) {}

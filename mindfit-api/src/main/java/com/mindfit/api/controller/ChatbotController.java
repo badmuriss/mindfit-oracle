@@ -42,6 +42,12 @@ public class ChatbotController {
             );
         }
         
-        return chatbotService.chat(request);
+        return chatbotService.chat(SecurityUtil.getCurrentUserId(), request);
+    }
+
+    @DeleteMapping("/history")
+    @Operation(summary = "Clear current user's chatbot history")
+    public void clearHistory() {
+        chatbotService.clearHistory(SecurityUtil.getCurrentUserId());
     }
 }

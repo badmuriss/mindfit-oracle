@@ -8,7 +8,7 @@ public record ExerciseRegisterResponse(
         String name,
         String description,
         LocalDateTime timestamp,
-        Integer duration,
+        Integer durationInMinutes,
         Integer caloriesBurnt,
         LocalDateTime createdAt
 ) {}

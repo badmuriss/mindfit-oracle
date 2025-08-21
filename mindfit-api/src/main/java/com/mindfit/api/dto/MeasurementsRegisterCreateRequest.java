@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
 
 public record MeasurementsRegisterCreateRequest(
         @Positive(message = "Weight must be positive")
-        Double weight,
+        Double weightInKG,
 
         @Positive(message = "Height must be positive")
-        Double height,
+        Integer heightInCM,
         
         @NotNull(message = "Timestamp is required")
         LocalDateTime timestamp

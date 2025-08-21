@@ -26,12 +26,14 @@ public class MealRegisterController {
     private final MealRegisterMapper mealRegisterMapper;
 
     @GetMapping
-    @Operation(summary = "Get all meal registers for user")
+    @Operation(summary = "Get all meal registers for user with optional date range filtering")
     public Page<MealRegisterResponse> getAllMealRegisters(
             @PathVariable String userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             Pageable pageable) {
         
-        return mealRegisterService.findByUserId(userId, pageable)
+        return mealRegisterService.findByUserId(userId, startDate, endDate, pageable)
                 .map(mealRegisterMapper::toResponse);
     }
 

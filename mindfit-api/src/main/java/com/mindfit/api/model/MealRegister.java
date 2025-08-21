@@ -24,6 +24,12 @@ public class MealRegister {
     
     private Integer calories;
     
+    private Double carbo;
+    
+    private Double protein;
+    
+    private Double fat;
+    
     @CreatedDate
     private LocalDateTime createdAt;
 }

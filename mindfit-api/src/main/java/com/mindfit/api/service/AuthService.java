@@ -15,6 +15,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.temporal.WeekFields;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -25,6 +28,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final ProfileGenerationService profileGenerationService;
+    private final LogService logService;
 
     public JwtResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -33,6 +38,9 @@ public class AuthService {
         
         User user = (User) authentication.getPrincipal();
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoles());
+        
+        // Update last login date and potentially generate profile
+        updateLastLogOnDate(user);
         
         return JwtResponse.of(token, user.getId(), user.getEmail(), user.getRoles());
     }
@@ -83,5 +91,38 @@ public class AuthService {
         
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoles());
         return JwtResponse.of(token, user.getId(), user.getEmail(), user.getRoles());
+    }
+    
+    private void updateLastLogOnDate(User user) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime lastLogOn = user.getLastLogOnDate();
+        
+        // Check if this is first login this week
+        if (isFirstLoginThisWeek(lastLogOn, now)) {
+            // Generate new profile based on user's activity data
+            try {
+                String profile = profileGenerationService.generateUserProfile(user.getId());
+                user.setProfile(profile);
+            } catch (Exception e) {
+                logService.logError("AUTH_SERVICE", "Failed to generate user profile on login", e.getMessage());
+            }
+        }
+        
+        user.setLastLogOnDate(now);
+        userRepository.save(user);
+    }
+    
+    private boolean isFirstLoginThisWeek(LocalDateTime lastLogOn, LocalDateTime now) {
+        if (lastLogOn == null) {
+            return true; // First login ever
+        }
+        
+        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+        int currentWeek = now.get(weekFields.weekOfWeekBasedYear());
+        int currentYear = now.getYear();
+        int lastLogOnWeek = lastLogOn.get(weekFields.weekOfWeekBasedYear());
+        int lastLogOnYear = lastLogOn.getYear();
+        
+        return currentYear != lastLogOnYear || currentWeek != lastLogOnWeek;
     }
 }

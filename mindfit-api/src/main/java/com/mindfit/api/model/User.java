@@ -29,6 +29,10 @@ public class User implements UserDetails {
     
     private Set<Role> roles;
     
+    private String profile;
+    
+    private LocalDateTime lastLogOnDate;
+    
     @CreatedDate
     private LocalDateTime createdAt;
     

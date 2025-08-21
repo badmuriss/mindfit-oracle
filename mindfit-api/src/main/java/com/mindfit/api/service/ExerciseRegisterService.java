@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 
 @Service
 @RequiredArgsConstructor
@@ -22,13 +24,24 @@ public class ExerciseRegisterService {
     private final ExerciseRegisterRepository exerciseRegisterRepository;
     private final ExerciseRegisterMapper exerciseRegisterMapper;
 
-    public Page<ExerciseRegisterDto> findByUserId(String userId, Pageable pageable) {
+    public Page<ExerciseRegisterDto> findByUserId(String userId, String startDate, String endDate, Pageable pageable) {
         if (!SecurityUtil.isAdmin() && !userId.equals(SecurityUtil.getCurrentUserId())) {
             throw new UnauthorizedException("Users can only view their own exercise registers");
         }
         
+        if (startDate != null && endDate != null) {
+            LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+            LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+            return exerciseRegisterRepository.findByUserIdAndTimestampBetween(userId, start, end, pageable)
+                    .map(exerciseRegisterMapper::toDto);
+        }
+        
         return exerciseRegisterRepository.findByUserId(userId, pageable)
                 .map(exerciseRegisterMapper::toDto);
+    }
+    
+    public Page<ExerciseRegisterDto> findByUserId(String userId, Pageable pageable) {
+        return findByUserId(userId, null, null, pageable);
     }
 
     public ExerciseRegisterDto findById(String id) {

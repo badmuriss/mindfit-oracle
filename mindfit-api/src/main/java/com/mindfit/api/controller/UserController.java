@@ -4,6 +4,7 @@ import com.mindfit.api.dto.UserCreateRequest;
 import com.mindfit.api.dto.UserResponse;
 import com.mindfit.api.dto.UserUpdateRequest;
 import com.mindfit.api.service.UserService;
+import com.mindfit.api.service.ProfileGenerationService;
 import com.mindfit.api.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final ProfileGenerationService profileGenerationService;
     private final UserMapper userMapper;
 
     @GetMapping
@@ -58,5 +60,13 @@ public class UserController {
     @Operation(summary = "Delete user")
     public void deleteUser(@PathVariable String id) {
         userService.delete(id);
+    }
+    
+    @PostMapping("/{id}/generate-profile")
+    @Operation(summary = "Generate user profile based on their activity data")
+    public String generateUserProfile(@PathVariable String id) {
+        String profile = profileGenerationService.generateUserProfile(id);
+        profileGenerationService.updateUserProfile(id, profile);
+        return profile;
     }
 }

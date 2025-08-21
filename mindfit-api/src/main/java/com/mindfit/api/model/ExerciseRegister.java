@@ -24,7 +24,7 @@ public class ExerciseRegister {
     
     private LocalDateTime timestamp;
     
-    private Integer duration;
+    private Integer durationInMinutes;
     
     private Integer caloriesBurnt;
     

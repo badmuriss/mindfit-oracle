@@ -10,5 +10,7 @@ public record UserResponse(
         String id,
         String email,
         Set<Role> roles,
+        String profile,
+        LocalDateTime lastLogOnDate,
         LocalDateTime createdAt
 ) {}

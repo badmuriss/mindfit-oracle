@@ -10,7 +10,7 @@ public record ExerciseRegisterUpdateRequest(
         LocalDateTime timestamp,
         
         @Positive(message = "Duration must be positive")
-        Integer duration,
+        Integer durationInMinutes,
         
         @Positive(message = "Calories burnt must be positive")
         Integer caloriesBurnt

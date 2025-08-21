@@ -18,9 +18,9 @@ public class MeasurementsRegister {
     @Indexed
     private String userId;
     
-    private Double weight;
+    private Double weightInKG;
     
-    private Double height;
+    private Integer heightInCM;
     
     private LocalDateTime timestamp;
     

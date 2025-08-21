@@ -26,12 +26,14 @@ public class MeasurementsRegisterController {
     private final MeasurementsRegisterMapper measurementsRegisterMapper;
 
     @GetMapping
-    @Operation(summary = "Get all measurements registers for user")
+    @Operation(summary = "Get all measurements registers for user with optional date range filtering")
     public Page<MeasurementsRegisterResponse> getAllMeasurementsRegisters(
             @PathVariable String userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             Pageable pageable) {
         
-        return measurementsRegisterService.findByUserId(userId, pageable)
+        return measurementsRegisterService.findByUserId(userId, startDate, endDate, pageable)
                 .map(measurementsRegisterMapper::toResponse);
     }
 

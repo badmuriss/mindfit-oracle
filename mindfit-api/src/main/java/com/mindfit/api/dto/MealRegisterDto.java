@@ -8,5 +8,8 @@ public record MealRegisterDto(
         String name,
         LocalDateTime timestamp,
         Integer calories,
+        Double carbo,
+        Double protein,
+        Double fat,
         LocalDateTime createdAt
 ) {}

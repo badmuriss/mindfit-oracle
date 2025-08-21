@@ -5,8 +5,8 @@ import java.time.LocalDateTime;
 public record MeasurementsRegisterResponse(
         String id,
         String userId,
-        Double weight,
-        Double height,
+        Double weightInKG,
+        Integer heightInCM,
         LocalDateTime timestamp,
         LocalDateTime createdAt
 ) {}

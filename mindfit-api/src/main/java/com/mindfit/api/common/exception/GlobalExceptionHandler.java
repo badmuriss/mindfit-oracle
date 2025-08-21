@@ -1,26 +1,33 @@
 package com.mindfit.api.common.exception;
 
+import com.mindfit.api.service.LogService;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
-@Slf4j
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final LogService logService;
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(
             ResourceNotFoundException ex, HttpServletRequest request) {
-        log.error("Resource not found: {}", ex.getMessage());
+        logService.logError("RESOURCE_NOT_FOUND", ex.getClass().getSimpleName(), ex.getMessage());
         
         ErrorResponse error = ErrorResponse.of(
                 ex.getMessage(),
@@ -35,7 +42,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(
             UnauthorizedException ex, HttpServletRequest request) {
-        log.error("Unauthorized access: {}", ex.getMessage());
+        logService.logError("UNAUTHORIZED_ACCESS", ex.getClass().getSimpleName(), ex.getMessage());
         
         ErrorResponse error = ErrorResponse.of(
                 ex.getMessage(),
@@ -50,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequestException(
             BadRequestException ex, HttpServletRequest request) {
-        log.error("Bad request: {}", ex.getMessage());
+        logService.logError("BAD_REQUEST", ex.getClass().getSimpleName(), ex.getMessage());
         
         ErrorResponse error = ErrorResponse.of(
                 ex.getMessage(),
@@ -62,10 +69,40 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentialsException(
+            BadCredentialsException ex, HttpServletRequest request) {
+        logService.logError("BAD_CREDENTIALS", ex.getClass().getSimpleName(), ex.getMessage());
+        
+        ErrorResponse error = ErrorResponse.of(
+                "Invalid email or password",
+                "BAD_CREDENTIALS",
+                HttpStatus.UNAUTHORIZED.value(),
+                request.getRequestURI()
+        );
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex, HttpServletRequest request) {
+        logService.logError("AUTHENTICATION_ERROR", ex.getClass().getSimpleName(), ex.getMessage());
+        
+        ErrorResponse error = ErrorResponse.of(
+                "Authentication failed",
+                "AUTHENTICATION_ERROR",
+                HttpStatus.UNAUTHORIZED.value(),
+                request.getRequestURI()
+        );
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(
             AccessDeniedException ex, HttpServletRequest request) {
-        log.error("Access denied: {}", ex.getMessage());
+        logService.logError("ACCESS_DENIED", ex.getClass().getSimpleName(), ex.getMessage());
         
         ErrorResponse error = ErrorResponse.of(
                 "Access denied",
@@ -80,7 +117,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(
             MethodArgumentNotValidException ex, HttpServletRequest request) {
-        log.error("Validation error: {}", ex.getMessage());
+        logService.logError("VALIDATION_ERROR", ex.getClass().getSimpleName(), ex.getMessage());
         
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
@@ -99,7 +136,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatusException(
             ResponseStatusException ex, HttpServletRequest request) {
-        log.error("Response status exception: {}", ex.getMessage());
+        logService.logError("RESPONSE_STATUS_ERROR", ex.getClass().getSimpleName(), ex.getMessage());
         
         ErrorResponse error = ErrorResponse.of(
                 ex.getReason() != null ? ex.getReason() : "An error occurred",
@@ -114,7 +151,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(
             Exception ex, HttpServletRequest request) {
-        log.error("Unexpected error occurred: ", ex);
+        // Log to database with full stack trace
+        logService.logError("APPLICATION_ERROR", ex.getClass().getSimpleName(), 
+                           getStackTraceAsString(ex));
         
         ErrorResponse error = ErrorResponse.of(
                 "An unexpected error occurred",
@@ -124,5 +163,12 @@ public class GlobalExceptionHandler {
         );
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+    
+    private String getStackTraceAsString(Exception ex) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        ex.printStackTrace(pw);
+        return sw.toString();
     }
 }

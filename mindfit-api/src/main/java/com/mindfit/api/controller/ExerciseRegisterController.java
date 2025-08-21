@@ -26,12 +26,14 @@ public class ExerciseRegisterController {
     private final ExerciseRegisterMapper exerciseRegisterMapper;
 
     @GetMapping
-    @Operation(summary = "Get all exercise registers for user")
+    @Operation(summary = "Get all exercise registers for user with optional date range filtering")
     public Page<ExerciseRegisterResponse> getAllExerciseRegisters(
             @PathVariable String userId,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             Pageable pageable) {
         
-        return exerciseRegisterService.findByUserId(userId, pageable)
+        return exerciseRegisterService.findByUserId(userId, startDate, endDate, pageable)
                 .map(exerciseRegisterMapper::toResponse);
     }
 
