@@ -1,0 +1,755 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
+
+import { DataTableComponent, TableColumn, TableAction } from '../../shared/components/data-table/data-table.component';
+import { ApiService, PaginationParams } from '../../api/api.service';
+import { ToastService } from '../../shared/services/toast.service';
+import { MealFormDialogComponent, MealDialogData, MealFormData } from '../../shared/components/meal-form-dialog/meal-form-dialog.component';
+import { ExerciseFormDialogComponent, ExerciseDialogData, ExerciseFormData } from '../../shared/components/exercise-form-dialog/exercise-form-dialog.component';
+import { MeasurementFormDialogComponent, MeasurementDialogData, MeasurementFormData } from '../../shared/components/measurement-form-dialog/measurement-form-dialog.component';
+import { PageEvent } from '@angular/material/paginator';
+
+export interface User {
+  id: string;
+  email: string;
+  roles: string[];
+  createdAt: string;
+  lastLogonDate: string;
+  profile: string;
+}
+
+export interface Meal {
+  id: string;
+  name: string;
+  timestamp: string;
+  calories: number;
+  carbo: number;
+  protein: number;
+  fat: number;
+}
+
+export interface Exercise {
+  id: string;
+  name: string;
+  timestamp: string;
+  durationInMinutes: number;
+  caloriesBurnt: number;
+  description: string;
+}
+
+export interface Measurement {
+  id: string;
+  weightInKG: number;
+  heightInCM: number;
+  timestamp: string;
+}
+
+@Component({
+  selector: 'app-user-detail',
+  imports: [
+    CommonModule,
+    MatTabsModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    DataTableComponent
+  ],
+  template: `
+    <div class="container mx-auto p-6">
+      <!-- User Info Header -->
+      <mat-card class="mb-6">
+        <div class="p-6">
+          <div class="flex justify-between items-start">
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                {{ user?.email || 'Loading...' }}
+              </h1>
+              <div class="space-y-2 text-sm text-gray-600">
+                <div class="flex gap-6">
+                  <span><strong>Roles:</strong> {{ user?.roles?.join(', ') || 'N/A' }}</span>
+                  <span><strong>Last Login:</strong> {{ (user?.lastLogonDate | date:'medium') || 'Never' }}</span>
+                </div>
+                <div>
+                  <span><strong>Created:</strong> {{ user?.createdAt | date:'medium' }}</span>
+                </div>
+                <div class="mt-3">
+                  <div class="flex items-center gap-3 mb-2">
+                    <span><strong>AI Profile:</strong></span>
+                    <button mat-stroked-button 
+                            color="primary" 
+                            (click)="generateProfile()"
+                            [disabled]="generatingProfile"
+                            class="flex items-center gap-2">
+                      <mat-icon>smart_toy</mat-icon>
+                      {{ generatingProfile ? 'Generating...' : 'Generate Profile' }}
+                    </button>
+                  </div>
+                  <p *ngIf="user?.profile" class="mt-1 text-gray-700 bg-gray-50 p-3 rounded-md">{{ user?.profile }}</p>
+                  <p *ngIf="!user?.profile" class="mt-1 text-gray-500 italic">No AI profile generated yet.</p>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button mat-stroked-button 
+                      color="accent"
+                      (click)="openChatbot()"
+                      class="flex items-center gap-2 px-4 py-2">
+                <mat-icon>chat</mat-icon>
+                Chatbot
+              </button>
+              <button mat-raised-button (click)="goBack()">
+                <mat-icon>arrow_back</mat-icon>
+                Back to Users
+              </button>
+            </div>
+          </div>
+        </div>
+      </mat-card>
+
+      <!-- Tabs -->
+      <mat-tab-group class="user-detail-tabs" (selectedTabChange)="onTabChange($event)">
+        <mat-tab label="Meals">
+          <div class="p-4">
+            <app-data-table
+              title="User Meals"
+              [columns]="mealColumns"
+              [data]="meals"
+              [totalElements]="mealsTotalElements"
+              [pageSize]="mealsPageSize"
+              [pageIndex]="mealsPageIndex"
+              [loading]="mealsLoading"
+              [actions]="mealActions"
+              [showFilters]="true"
+              [showDateFilters]="true"
+              [showSearch]="false"
+              [showCreateButton]="true"
+              (pageChange)="onMealsPageChange($event)"
+              (filtersChange)="onMealsFiltersChange($event)"
+              (create)="onCreateMeal()">
+            </app-data-table>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Exercises">
+          <div class="p-4">
+            <app-data-table
+              title="User Exercises"
+              [columns]="exerciseColumns"
+              [data]="exercises"
+              [totalElements]="exercisesTotalElements"
+              [pageSize]="exercisesPageSize"
+              [pageIndex]="exercisesPageIndex"
+              [loading]="exercisesLoading"
+              [actions]="exerciseActions"
+              [showFilters]="true"
+              [showDateFilters]="true"
+              [showSearch]="false"
+              [showCreateButton]="true"
+              (pageChange)="onExercisesPageChange($event)"
+              (filtersChange)="onExercisesFiltersChange($event)"
+              (create)="onCreateExercise()">
+            </app-data-table>
+          </div>
+        </mat-tab>
+
+        <mat-tab label="Measurements">
+          <div class="p-4">
+            <app-data-table
+              title="User Measurements"
+              [columns]="measurementColumns"
+              [data]="measurements"
+              [totalElements]="measurementsTotalElements"
+              [pageSize]="measurementsPageSize"
+              [pageIndex]="measurementsPageIndex"
+              [loading]="measurementsLoading"
+              [actions]="measurementActions"
+              [showFilters]="true"
+              [showDateFilters]="true"
+              [showSearch]="false"
+              [showCreateButton]="true"
+              (pageChange)="onMeasurementsPageChange($event)"
+              (filtersChange)="onMeasurementsFiltersChange($event)"
+              (create)="onCreateMeasurement()">
+            </app-data-table>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
+  `,
+  styles: [`
+    .user-detail-tabs {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  `]
+})
+export class UserDetailComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  userId!: string;
+  user: User | null = null;
+
+  meals: Meal[] = [];
+  mealsTotalElements = 0;
+  mealsPageSize = 20;
+  mealsPageIndex = 0;
+  mealsLoading = false;
+
+  exercises: Exercise[] = [];
+  exercisesTotalElements = 0;
+  exercisesPageSize = 20;
+  exercisesPageIndex = 0;
+  exercisesLoading = false;
+
+  measurements: Measurement[] = [];
+  measurementsTotalElements = 0;
+  measurementsPageSize = 20;
+  measurementsPageIndex = 0;
+  measurementsLoading = false;
+  generatingProfile = false;
+
+  mealColumns: TableColumn[] = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'timestamp', label: 'Date', type: 'date', sortable: true },
+    { key: 'calories', label: 'Calories', sortable: true },
+    { key: 'carbo', label: 'Carbs (g)', sortable: true },
+    { key: 'protein', label: 'Protein (g)', sortable: true },
+    { key: 'fat', label: 'Fat (g)', sortable: true },
+    { key: 'actions', label: 'Actions', type: 'actions', sortable: false }
+  ];
+
+  exerciseColumns: TableColumn[] = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'timestamp', label: 'Date', type: 'date', sortable: true },
+    { key: 'durationInMinutes', label: 'Duration (min)', sortable: true },
+    { key: 'caloriesBurnt', label: 'Calories Burnt', sortable: true },
+    { key: 'description', label: 'Description', sortable: false },
+    { key: 'actions', label: 'Actions', type: 'actions', sortable: false }
+  ];
+
+  measurementColumns: TableColumn[] = [
+    { key: 'weightInKG', label: 'Weight (kg)', sortable: true },
+    { key: 'heightInCM', label: 'Height (cm)', sortable: true },
+    { key: 'timestamp', label: 'Date', type: 'date', sortable: true },
+    { key: 'actions', label: 'Actions', type: 'actions', sortable: false }
+  ];
+
+  mealActions: TableAction[] = [
+    { icon: 'edit', label: 'Edit', handler: (item) => this.editMeal(item) },
+    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteMeal(item), color: 'warn' }
+  ];
+
+  exerciseActions: TableAction[] = [
+    { icon: 'edit', label: 'Edit', handler: (item) => this.editExercise(item) },
+    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteExercise(item), color: 'warn' }
+  ];
+
+  measurementActions: TableAction[] = [
+    { icon: 'edit', label: 'Edit', handler: (item) => this.editMeasurement(item) },
+    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteMeasurement(item), color: 'warn' }
+  ];
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private apiService: ApiService,
+    private toast: ToastService,
+    private dialog: MatDialog
+  ) {}
+
+  ngOnInit(): void {
+    this.userId = this.route.snapshot.params['id'];
+    this.loadUser();
+    this.loadMeals();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadUser(): void {
+    this.apiService.get<User>(`/users/${this.userId}`)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          this.user = user;
+        },
+        error: (error) => {
+          console.error('Failed to load user:', error);
+          this.toast.error('Failed to load user details');
+        }
+      });
+  }
+
+  onTabChange(event: any): void {
+    const tabIndex = event.index;
+    switch (tabIndex) {
+      case 0: // Meals
+        this.loadMeals();
+        break;
+      case 1: // Exercises
+        this.loadExercises();
+        break;
+      case 2: // Measurements
+        this.loadMeasurements();
+        break;
+    }
+  }
+
+  loadMeals(): void {
+    const params: PaginationParams = {
+      page: this.mealsPageIndex,
+      size: this.mealsPageSize,
+      sort: 'timestamp,desc'
+    };
+    this.loadMealsWithParams(params);
+  }
+
+  loadMealsWithParams(params: PaginationParams): void {
+    this.mealsLoading = true;
+    this.apiService.get<any>(`/users/${this.userId}/meals`, params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.meals = response.content || [];
+          this.mealsTotalElements = response.totalElements || 0;
+          this.mealsLoading = false;
+        },
+        error: (error) => {
+          console.error('Failed to load meals:', error);
+          this.mealsLoading = false;
+        }
+      });
+  }
+
+  loadExercises(): void {
+    const params: PaginationParams = {
+      page: this.exercisesPageIndex,
+      size: this.exercisesPageSize,
+      sort: 'timestamp,desc'
+    };
+    this.loadExercisesWithParams(params);
+  }
+
+  loadExercisesWithParams(params: PaginationParams): void {
+    this.exercisesLoading = true;
+    this.apiService.get<any>(`/users/${this.userId}/exercises`, params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.exercises = response.content || [];
+          this.exercisesTotalElements = response.totalElements || 0;
+          this.exercisesLoading = false;
+        },
+        error: (error) => {
+          console.error('Failed to load exercises:', error);
+          this.exercisesLoading = false;
+        }
+      });
+  }
+
+  loadMeasurements(): void {
+    const params: PaginationParams = {
+      page: this.measurementsPageIndex,
+      size: this.measurementsPageSize,
+      sort: 'timestamp,desc'
+    };
+    this.loadMeasurementsWithParams(params);
+  }
+
+  loadMeasurementsWithParams(params: PaginationParams): void {
+    this.measurementsLoading = true;
+    this.apiService.get<any>(`/users/${this.userId}/measurements`, params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.measurements = response.content || [];
+          this.measurementsTotalElements = response.totalElements || 0;
+          this.measurementsLoading = false;
+        },
+        error: (error) => {
+          console.error('Failed to load measurements:', error);
+          this.measurementsLoading = false;
+        }
+      });
+  }
+
+  onMealsPageChange(event: PageEvent): void {
+    this.mealsPageIndex = event.pageIndex;
+    this.mealsPageSize = event.pageSize;
+    this.loadMeals();
+  }
+
+  onExercisesPageChange(event: PageEvent): void {
+    this.exercisesPageIndex = event.pageIndex;
+    this.exercisesPageSize = event.pageSize;
+    this.loadExercises();
+  }
+
+  onMeasurementsPageChange(event: PageEvent): void {
+    this.measurementsPageIndex = event.pageIndex;
+    this.measurementsPageSize = event.pageSize;
+    this.loadMeasurements();
+  }
+
+  onMealsFiltersChange(filters: any): void {
+    // Apply date filters to meals
+    const params: PaginationParams = {
+      page: 0, // Reset to first page
+      size: this.mealsPageSize,
+      sort: 'timestamp,desc'
+    };
+    
+    if (filters.from) {
+      params.from = new Date(filters.from).toISOString().split('T')[0];
+    }
+    if (filters.to) {
+      params.to = new Date(filters.to).toISOString().split('T')[0];
+    }
+    
+    this.mealsPageIndex = 0;
+    this.loadMealsWithParams(params);
+  }
+
+  onExercisesFiltersChange(filters: any): void {
+    // Apply date filters to exercises
+    const params: PaginationParams = {
+      page: 0, // Reset to first page
+      size: this.exercisesPageSize,
+      sort: 'timestamp,desc'
+    };
+    
+    if (filters.from) {
+      params.from = new Date(filters.from).toISOString().split('T')[0];
+    }
+    if (filters.to) {
+      params.to = new Date(filters.to).toISOString().split('T')[0];
+    }
+    
+    this.exercisesPageIndex = 0;
+    this.loadExercisesWithParams(params);
+  }
+
+  onMeasurementsFiltersChange(filters: any): void {
+    // Apply date filters to measurements
+    const params: PaginationParams = {
+      page: 0, // Reset to first page
+      size: this.measurementsPageSize,
+      sort: 'timestamp,desc'
+    };
+    
+    if (filters.from) {
+      params.from = new Date(filters.from).toISOString().split('T')[0];
+    }
+    if (filters.to) {
+      params.to = new Date(filters.to).toISOString().split('T')[0];
+    }
+    
+    this.measurementsPageIndex = 0;
+    this.loadMeasurementsWithParams(params);
+  }
+
+  onCreateMeal(): void {
+    const dialogData: MealDialogData = {
+      isEdit: false,
+      userId: this.userId
+    };
+
+    const dialogRef = this.dialog.open(MealFormDialogComponent, {
+      width: '600px',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.createMeal(result);
+      }
+    });
+  }
+
+  onCreateExercise(): void {
+    const dialogData: ExerciseDialogData = {
+      isEdit: false,
+      userId: this.userId
+    };
+
+    const dialogRef = this.dialog.open(ExerciseFormDialogComponent, {
+      width: '600px',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.createExercise(result);
+      }
+    });
+  }
+
+  onCreateMeasurement(): void {
+    const dialogData: MeasurementDialogData = {
+      isEdit: false,
+      userId: this.userId
+    };
+
+    const dialogRef = this.dialog.open(MeasurementFormDialogComponent, {
+      width: '500px',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.createMeasurement(result);
+      }
+    });
+  }
+
+  editMeal(meal: Meal): void {
+    const dialogData: MealDialogData = {
+      meal: {
+        id: meal.id,
+        name: meal.name,
+        timestamp: meal.timestamp,
+        calories: meal.calories,
+        carbo: meal.carbo,
+        protein: meal.protein,
+        fat: meal.fat
+      },
+      isEdit: true,
+      userId: this.userId
+    };
+
+    const dialogRef = this.dialog.open(MealFormDialogComponent, {
+      width: '600px',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.updateMeal(result);
+      }
+    });
+  }
+
+  deleteMeal(meal: Meal): void {
+    if (confirm(`Are you sure you want to delete the meal "${meal.name}"?`)) {
+      this.apiService.delete(`/users/${this.userId}/meals/${meal.id}`)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toast.success('Meal deleted successfully');
+            this.loadMeals();
+          },
+          error: (error) => {
+            console.error('Failed to delete meal:', error);
+          }
+        });
+    }
+  }
+
+  editExercise(exercise: Exercise): void {
+    const dialogData: ExerciseDialogData = {
+      exercise: {
+        id: exercise.id,
+        name: exercise.name,
+        timestamp: exercise.timestamp,
+        durationInMinutes: exercise.durationInMinutes,
+        caloriesBurnt: exercise.caloriesBurnt,
+        description: exercise.description
+      },
+      isEdit: true,
+      userId: this.userId
+    };
+
+    const dialogRef = this.dialog.open(ExerciseFormDialogComponent, {
+      width: '600px',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.updateExercise(result);
+      }
+    });
+  }
+
+  deleteExercise(exercise: Exercise): void {
+    if (confirm(`Are you sure you want to delete the exercise "${exercise.name}"?`)) {
+      this.apiService.delete(`/users/${this.userId}/exercises/${exercise.id}`)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toast.success('Exercise deleted successfully');
+            this.loadExercises();
+          },
+          error: (error) => {
+            console.error('Failed to delete exercise:', error);
+          }
+        });
+    }
+  }
+
+  editMeasurement(measurement: Measurement): void {
+    const dialogData: MeasurementDialogData = {
+      measurement: {
+        id: measurement.id,
+        weightInKG: measurement.weightInKG,
+        heightInCM: measurement.heightInCM,
+        timestamp: measurement.timestamp
+      },
+      isEdit: true,
+      userId: this.userId
+    };
+
+    const dialogRef = this.dialog.open(MeasurementFormDialogComponent, {
+      width: '500px',
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.updateMeasurement(result);
+      }
+    });
+  }
+
+  deleteMeasurement(measurement: Measurement): void {
+    if (confirm(`Are you sure you want to delete this measurement?`)) {
+      this.apiService.delete(`/users/${this.userId}/measurements/${measurement.id}`)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toast.success('Measurement deleted successfully');
+            this.loadMeasurements();
+          },
+          error: (error) => {
+            console.error('Failed to delete measurement:', error);
+          }
+        });
+    }
+  }
+
+  goBack(): void {
+    this.router.navigate(['/users']);
+  }
+
+  generateProfile(): void {
+    this.generatingProfile = true;
+    this.apiService.post(`/users/${this.userId}/generate-profile`, {})
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.toast.success('AI profile generated successfully');
+          // Refresh the page to show updated profile
+          window.location.reload();
+        },
+        error: (error) => {
+          this.generatingProfile = false;
+          console.error('Failed to generate profile:', error);
+          this.toast.error('Failed to generate AI profile');
+        }
+      });
+  }
+
+  openChatbot(): void {
+    this.router.navigate(['/users', this.userId, 'chatbot']);
+  }
+
+  // Private CRUD methods
+  private createMeal(mealData: MealFormData): void {
+    this.apiService.post(`/users/${this.userId}/meals`, mealData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toast.success('Meal added successfully');
+          this.loadMeals();
+        },
+        error: (error) => {
+          console.error('Failed to create meal:', error);
+          this.toast.error('Failed to add meal');
+        }
+      });
+  }
+
+  private updateMeal(mealData: MealFormData): void {
+    this.apiService.put(`/users/${this.userId}/meals/${mealData.id}`, mealData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toast.success('Meal updated successfully');
+          this.loadMeals();
+        },
+        error: (error) => {
+          console.error('Failed to update meal:', error);
+          this.toast.error('Failed to update meal');
+        }
+      });
+  }
+
+  private createExercise(exerciseData: ExerciseFormData): void {
+    this.apiService.post(`/users/${this.userId}/exercises`, exerciseData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toast.success('Exercise added successfully');
+          this.loadExercises();
+        },
+        error: (error) => {
+          console.error('Failed to create exercise:', error);
+          this.toast.error('Failed to add exercise');
+        }
+      });
+  }
+
+  private updateExercise(exerciseData: ExerciseFormData): void {
+    this.apiService.put(`/users/${this.userId}/exercises/${exerciseData.id}`, exerciseData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toast.success('Exercise updated successfully');
+          this.loadExercises();
+        },
+        error: (error) => {
+          console.error('Failed to update exercise:', error);
+          this.toast.error('Failed to update exercise');
+        }
+      });
+  }
+
+  private createMeasurement(measurementData: MeasurementFormData): void {
+    this.apiService.post(`/users/${this.userId}/measurements`, measurementData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toast.success('Measurement added successfully');
+          this.loadMeasurements();
+        },
+        error: (error) => {
+          console.error('Failed to create measurement:', error);
+          this.toast.error('Failed to add measurement');
+        }
+      });
+  }
+
+  private updateMeasurement(measurementData: MeasurementFormData): void {
+    this.apiService.put(`/users/${this.userId}/measurements/${measurementData.id}`, measurementData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.toast.success('Measurement updated successfully');
+          this.loadMeasurements();
+        },
+        error: (error) => {
+          console.error('Failed to update measurement:', error);
+          this.toast.error('Failed to update measurement');
+        }
+      });
+  }
+}

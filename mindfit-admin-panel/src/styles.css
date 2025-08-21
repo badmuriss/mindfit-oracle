@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body { 
+  margin: 0; 
+  font-family: 'Inter', Roboto, "Helvetica Neue", sans-serif; 
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Apply Inter font globally to all components */
+* {
+  font-family: 'Inter', Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Material components font override */
+.mat-mdc-button,
+.mat-mdc-form-field,
+.mat-mdc-card,
+.mat-mdc-table,
+.mat-mdc-paginator,
+.mat-mdc-menu-item,
+.mat-mdc-dialog-title,
+.mat-mdc-snack-bar-label {
+  font-family: 'Inter', Roboto, "Helvetica Neue", sans-serif !important;
+}
+
+/* Snackbar colors */
+.success-snackbar {
+  --mdc-snackbar-container-color: #4caf50 !important;
+  --mat-mdc-snack-bar-button-color: #fff !important;
+  --mdc-snackbar-supporting-text-color: #fff !important;
+}
+
+.error-snackbar {
+  --mdc-snackbar-container-color: #f44336 !important;
+  --mat-mdc-snack-bar-button-color: #fff !important;
+  --mdc-snackbar-supporting-text-color: #fff !important;
+}
+
+.warning-snackbar {
+  --mdc-snackbar-container-color: #ff9800 !important;
+  --mat-mdc-snack-bar-button-color: #fff !important;
+  --mdc-snackbar-supporting-text-color: #fff !important;
+}
+
+.info-snackbar {
+  --mdc-snackbar-container-color: #2196f3 !important;
+  --mat-mdc-snack-bar-button-color: #fff !important;
+  --mdc-snackbar-supporting-text-color: #fff !important;
+}
+
+/* Fix MDC notched outline border issue - remove only horizontal side borders from notch element */
+.mdc-notched-outline__notch {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.mat-mdc-form-field .mdc-notched-outline {
+  border-color: rgba(0, 0, 0, 0.38) !important;
+}
+
+.mat-mdc-form-field .mdc-notched-outline__leading,
+.mat-mdc-form-field .mdc-notched-outline__trailing {
+  border-color: rgba(0, 0, 0, 0.38) !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+}
+
+.mat-mdc-form-field.mat-focused .mdc-notched-outline {
+  border-color: #1976d2 !important;
+}
+
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__leading,
+.mat-mdc-form-field.mat-focused .mdc-notched-outline__trailing {
+  border-color: #1976d2 !important;
+  border-width: 2px !important;
+}
+
+/* Ensure proper border continuity */
+.mat-mdc-form-field .mdc-notched-outline__leading {
+  border-right: none !important;
+  border-top-right-radius: 4px !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+.mat-mdc-form-field .mdc-notched-outline__trailing {
+  border-left: none !important;
+  border-top-left-radius: 4px !important;
+  border-bottom-left-radius: 4px !important;
+}
