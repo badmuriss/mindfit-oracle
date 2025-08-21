@@ -60,13 +60,13 @@ export interface TableFilters {
       <mat-card class="mb-4 p-4" *ngIf="showFilters">
         <form [formGroup]="filterForm">
           <div class="flex flex-wrap gap-4">
-            <mat-form-field *ngIf="showSearch" class="flex-1 min-w-64">
+            <mat-form-field *ngIf="showSearch" class="flex-1 w-full sm:min-w-64">
               <mat-label>Search</mat-label>
               <input matInput formControlName="search" placeholder="Search...">
               <mat-icon matSuffix>search</mat-icon>
             </mat-form-field>
 
-            <div class="flex gap-4 ml-auto" *ngIf="showDateFilters">
+            <div class="flex flex-col sm:flex-row gap-4 sm:ml-auto" *ngIf="showDateFilters">
               <mat-form-field>
                 <mat-label>From Date</mat-label>
                 <input matInput [matDatepicker]="fromPicker" formControlName="from">
@@ -109,7 +109,8 @@ export interface TableFilters {
         <div class="relative">
           <mat-spinner *ngIf="loading" class="absolute top-4 left-1/2 transform -translate-x-1/2 z-10"></mat-spinner>
           
-          <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSortChange($event)" [class.opacity-50]="loading">
+          <div class="w-full overflow-x-auto">
+          <table mat-table [dataSource]="dataSource" matSort (matSortChange)="onSortChange($event)" [class.opacity-50]="loading" class="min-w-[640px] sm:min-w-0 w-full">
             <ng-container *ngFor="let column of columns; trackBy: trackByKey" [matColumnDef]="column.key">
               <th mat-header-cell *matHeaderCellDef 
                   [mat-sort-header]="column.key"
@@ -147,6 +148,7 @@ export interface TableFilters {
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           </table>
+          </div>
 
           <div *ngIf="!loading && dataSource.data.length === 0" class="text-center py-8 text-gray-500">
             <mat-icon class="text-6xl text-gray-300 mb-4">inbox</mat-icon>

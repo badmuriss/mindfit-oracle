@@ -1,0 +1,56 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: mindfit-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mindfit}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mindfit-network
+
+  api:
+    build:
+      context: ./mindfit-api
+      dockerfile: Dockerfile
+    container_name: mindfit-api
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/mindfit}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}
+      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentPleaseChangeInProduction123456789012345678901234567890}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8081}
+    ports:
+      - "8080:8080"
+    networks:
+      - mindfit-network
+
+  admin:
+    build:
+      context: ./mindfit-admin-panel
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: ${API_BASE_URL}
+    container_name: mindfit-admin-panel
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
+    networks:
+      - mindfit-network
+
+networks:
+  mindfit-network:
+    driver: bridge
+
+volumes:
+  mongo_data:

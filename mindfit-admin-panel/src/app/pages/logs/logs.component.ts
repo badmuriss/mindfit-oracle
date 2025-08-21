@@ -42,7 +42,7 @@ export interface LogEntry {
     DataTableComponent
   ],
   template: `
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto p-4 sm:p-6">
       <h1 class="text-2xl font-bold text-gray-900 mb-6">System Logs</h1>
       
 
@@ -51,7 +51,7 @@ export interface LogEntry {
         <div class="p-4">
           <form [formGroup]="filtersForm">
             <div class="flex flex-wrap gap-4">
-              <mat-form-field class="min-w-40">
+              <mat-form-field class="w-full sm:min-w-40">
                 <mat-label>Type</mat-label>
                 <mat-select formControlName="type">
                   <mat-option value="">All Types</mat-option>
@@ -61,15 +61,15 @@ export interface LogEntry {
                 </mat-select>
               </mat-form-field>
 
-              <div class="flex gap-4 ml-auto">
-                <mat-form-field class="min-w-40">
+              <div class="flex flex-col sm:flex-row gap-4 sm:ml-auto">
+                <mat-form-field class="w-full sm:min-w-40">
                   <mat-label>From</mat-label>
                   <input matInput [matDatepicker]="fromPicker" formControlName="from">
                   <mat-datepicker-toggle matSuffix [for]="fromPicker"></mat-datepicker-toggle>
                   <mat-datepicker #fromPicker></mat-datepicker>
                 </mat-form-field>
 
-                <mat-form-field class="min-w-40">
+                <mat-form-field class="w-full sm:min-w-40">
                   <mat-label>To</mat-label>
                   <input matInput [matDatepicker]="toPicker" formControlName="to">
                   <mat-datepicker-toggle matSuffix [for]="toPicker"></mat-datepicker-toggle>

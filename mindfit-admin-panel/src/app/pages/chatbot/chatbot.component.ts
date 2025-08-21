@@ -32,15 +32,15 @@ export interface ChatMessage {
     MatProgressSpinnerModule
   ],
   template: `
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto p-4 sm:p-6">
       <!-- Header -->
       <mat-card class="mb-6">
         <div class="p-6">
-          <div class="flex justify-between items-center">
+          <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
             <h1 class="text-2xl font-bold text-gray-900">
               AI Chatbot for User {{ userId }}
             </h1>
-            <button mat-raised-button (click)="goBack()">
+            <button mat-raised-button class="self-start md:self-auto" (click)="goBack()">
               <mat-icon>arrow_back</mat-icon>
               Back to User Detail
             </button>
@@ -87,7 +87,7 @@ export interface ChatMessage {
 
           <!-- Input Area -->
           <div class="border-t p-4 bg-white">
-            <form [formGroup]="chatForm" (ngSubmit)="sendMessage()" class="flex gap-3">
+            <form [formGroup]="chatForm" (ngSubmit)="sendMessage()" class="flex flex-col sm:flex-row gap-3">
               <mat-form-field appearance="outline" class="flex-1">
                 <mat-label>Type your message</mat-label>
                 <input matInput 
@@ -100,7 +100,7 @@ export interface ChatMessage {
                       color="primary" 
                       type="submit"
                       [disabled]="chatForm.invalid || isLoading"
-                      class="flex items-center gap-2">
+                      class="flex items-center gap-2 sm:self-auto self-stretch">
                 <mat-icon>send</mat-icon>
                 Send
               </button>

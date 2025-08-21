@@ -32,7 +32,7 @@ import { AuthService, LoginResponse } from '../../../auth/auth.service';
         </div>
         
         <!-- Navigation -->
-        <nav class="flex items-center gap-2" *ngIf="currentUser">
+        <nav class="hidden md:flex items-center gap-2" *ngIf="currentUser">
           <a mat-button 
              routerLink="/users" 
              routerLinkActive="active"
@@ -51,6 +51,11 @@ import { AuthService, LoginResponse } from '../../../auth/auth.service';
         </nav>
       </div>
       
+      <!-- Mobile menu toggle -->
+      <button mat-icon-button class="md:hidden mr-2" *ngIf="currentUser" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle navigation">
+        <mat-icon>{{ mobileMenuOpen ? 'close' : 'menu' }}</mat-icon>
+      </button>
+
       <!-- User Menu -->
       <div class="flex items-center" *ngIf="currentUser">
         <button mat-icon-button 
@@ -71,6 +76,24 @@ import { AuthService, LoginResponse } from '../../../auth/auth.service';
         </mat-menu>
       </div>
     </mat-toolbar>
+
+    <!-- Mobile nav drawer -->
+    <div *ngIf="currentUser && mobileMenuOpen" class="md:hidden bg-white border-b border-gray-200 shadow-sm px-4 py-2">
+      <a 
+        routerLink="/users" 
+        routerLinkActive="active"
+        (click)="mobileMenuOpen = false"
+        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-50">
+        <span class="inline-flex items-center"><mat-icon class="mr-2">people</mat-icon> Users</span>
+      </a>
+      <a 
+        routerLink="/logs" 
+        routerLinkActive="active"
+        (click)="mobileMenuOpen = false"
+        class="block py-2 px-3 rounded-md text-gray-700 hover:bg-gray-50">
+        <span class="inline-flex items-center"><mat-icon class="mr-2">description</mat-icon> Logs</span>
+      </a>
+    </div>
   `,
   styles: [`
     .navbar {
@@ -124,6 +147,7 @@ import { AuthService, LoginResponse } from '../../../auth/auth.service';
 export class NavbarComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   currentUser: LoginResponse | null = null;
+  mobileMenuOpen = false;
 
   constructor(
     private authService: AuthService,

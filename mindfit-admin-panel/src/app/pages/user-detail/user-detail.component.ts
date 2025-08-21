@@ -18,6 +18,7 @@ import { PageEvent } from '@angular/material/paginator';
 
 export interface User {
   id: string;
+  name: string;
   email: string;
   roles: string[];
   createdAt: string;
@@ -62,17 +63,20 @@ export interface Measurement {
     DataTableComponent
   ],
   template: `
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto p-4 sm:p-6">
       <!-- User Info Header -->
       <mat-card class="mb-6">
         <div class="p-6">
-          <div class="flex justify-between items-start">
+          <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
             <div>
-              <h1 class="text-2xl font-bold text-gray-900 mb-2">
-                {{ user?.email || 'Loading...' }}
+              <h1 class="text-2xl font-bold text-gray-900 mb-1">
+                {{ user?.name || 'Loading...' }}
               </h1>
+              <div class="text-gray-500 mb-2 break-words">
+                {{ user?.email }}
+              </div>
               <div class="space-y-2 text-sm text-gray-600">
-                <div class="flex gap-6">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-6">
                   <span><strong>Roles:</strong> {{ user?.roles?.join(', ') || 'N/A' }}</span>
                   <span><strong>Last Login:</strong> {{ (user?.lastLogonDate | date:'medium') || 'Never' }}</span>
                 </div>
@@ -96,7 +100,7 @@ export interface Measurement {
                 </div>
               </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 md:mt-0 mt-2">
               <button mat-stroked-button 
                       color="accent"
                       (click)="openChatbot()"

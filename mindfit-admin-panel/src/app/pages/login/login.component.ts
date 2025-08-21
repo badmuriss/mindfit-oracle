@@ -26,26 +26,26 @@ import { ToastService } from '../../shared/services/toast.service';
     MatIconModule
   ],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 flex items-center justify-center p-4">
-      <div class="w-full max-w-md">
+    <div class="h-[93dvh] bg-gradient-to-br from-emerald-50 via-white to-green-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div class="w-full max-w-md sm:max-w-lg">
         <!-- Logo and Header -->
-        <div class="text-center mb-8">
-          <img src="/logo_mindfit.png" alt="MindFit" class="w-20 h-20 mx-auto mb-6 drop-shadow-sm">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Welcome Back</h1>
-          <p class="text-gray-600 font-medium">Sign in to MindFit Admin Dashboard</p>
+        <div class="text-center mb-6 sm:mb-8">
+          <img src="/logo_mindfit.png" alt="MindFit" class="w-16 h-20 sm:w-20 sm:h-25 mx-auto mb-4 sm:mb-6 drop-shadow-sm">
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2 tracking-tight px-4">Welcome Back</h1>
+          <p class="text-gray-600 font-medium text-sm sm:text-base px-4">Sign in to MindFit Admin Dashboard</p>
         </div>
 
         <!-- Login Card -->
-        <mat-card class="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-          <mat-card-content class="p-8">
+        <mat-card class="border-0 shadow-xl bg-white/80 backdrop-blur-sm mx-2 sm:mx-0">
+          <mat-card-content class="p-6 sm:p-8">
             <!-- Error Message -->
             <div *ngIf="errorMessage" 
-                 class="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center">
-              <mat-icon class="mr-2 text-red-500">error_outline</mat-icon>
-              {{ errorMessage }}
+                 class="mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-start">
+              <mat-icon class="mr-2 text-red-500 mt-0.5 flex-shrink-0">error_outline</mat-icon>
+              <span class="break-words">{{ errorMessage }}</span>
             </div>
 
-            <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+            <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4 sm:space-y-6">
               <!-- Email Field -->
               <mat-form-field appearance="outline" class="w-full modern-field">
                 <mat-label class="font-medium">Email Address</mat-label>
@@ -88,13 +88,13 @@ import { ToastService } from '../../shared/services/toast.service';
                       color="primary"
                       type="submit"
                       [disabled]="loginForm.invalid || loading"
-                      class="w-full h-12 text-base font-semibold tracking-wide modern-button">
-                <div class="flex items-center justify-center gap-3">
+                      class="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold tracking-wide modern-button">
+                <div class="flex items-center justify-center gap-2 sm:gap-3">
                   <mat-progress-spinner *ngIf="loading" 
                                        mode="indeterminate" 
-                                       diameter="20"
+                                       diameter="18"
                                        strokeWidth="3"></mat-progress-spinner>
-                  <span>{{ loading ? 'Signing you in...' : 'Sign In' }}</span>
+                  <span class="truncate">{{ loading ? 'Signing you in...' : 'Sign In' }}</span>
                 </div>
               </button>
             </form>
@@ -102,8 +102,8 @@ import { ToastService } from '../../shared/services/toast.service';
         </mat-card>
 
         <!-- Footer -->
-        <div class="text-center mt-8">
-          <p class="text-sm text-gray-500 font-medium">
+        <div class="text-center mt-6 sm:mt-8 px-4">
+          <p class="text-xs sm:text-sm text-gray-500 font-medium">
             MindFit Admin Portal • Secure Access
           </p>
         </div>
@@ -113,7 +113,6 @@ import { ToastService } from '../../shared/services/toast.service';
   styles: [`
     :host {
       display: block;
-      height: 100vh;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     
@@ -211,7 +210,7 @@ export class LoginComponent implements OnInit {
           finalize(() => this.loading = false)
         )
         .subscribe({
-          next: (response) => {
+          next: () => {
             this.toast.success('Login successful!');
             this.router.navigate(['/users']);
           },

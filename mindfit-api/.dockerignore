@@ -1,0 +1,10 @@
+target
+.mvn
+mvnw
+.vscode
+.idea
+.git
+.gitignore
+**/.DS_Store
+.env
+

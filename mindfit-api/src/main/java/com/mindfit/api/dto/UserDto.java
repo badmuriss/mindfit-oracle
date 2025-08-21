@@ -9,6 +9,7 @@ import java.util.Set;
 public record UserDto(
         String id,
         String email,
+        String name,
         String password,
         Set<Role> roles,
         String profile,

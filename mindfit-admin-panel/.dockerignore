@@ -1,0 +1,12 @@
+node_modules
+dist
+.angular
+.vscode
+.idea
+Dockerfile
+npm-debug.log
+yarn-error.log
+.git
+.gitignore
+**/.DS_Store
+

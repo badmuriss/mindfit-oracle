@@ -29,6 +29,8 @@ public class User implements UserDetails {
     
     private Set<Role> roles;
     
+    private String name;
+    
     private String profile;
     
     private LocalDateTime lastLogonDate;

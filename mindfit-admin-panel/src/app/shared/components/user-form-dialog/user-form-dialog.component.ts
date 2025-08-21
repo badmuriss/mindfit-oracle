@@ -12,6 +12,7 @@ import { AuthService } from '../../../auth/auth.service';
 
 export interface UserFormData {
   id?: string;
+  name?: string;
   email: string;
   password?: string;
   userType?: string;
@@ -47,6 +48,18 @@ export interface UserDialogData {
 
       <form [formGroup]="userForm" class="space-y-4">
         <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Name</mat-label>
+          <input matInput 
+                 type="text" 
+                 formControlName="name"
+                 placeholder="Full name">
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="userForm.get('name')?.invalid && userForm.get('name')?.touched">
+            Please enter a name
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
           <mat-label>Email Address</mat-label>
           <input matInput 
                  type="email" 
@@ -75,7 +88,7 @@ export interface UserDialogData {
           </mat-error>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="w-full">
+        <mat-form-field appearance="outline" class="w-full" *ngIf="!data.isEdit">
           <mat-label>User Type</mat-label>
           <mat-select formControlName="userType">
             <mat-option value="user">User</mat-option>
@@ -128,6 +141,7 @@ export class UserFormDialogComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: UserDialogData
   ) {
     this.userForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', this.data.isEdit ? [] : [Validators.required, Validators.minLength(6)]],
       userType: ['user', [Validators.required]]
@@ -140,11 +154,10 @@ export class UserFormDialogComponent implements OnInit {
     this.isSuperAdmin = currentUser?.roles?.includes('SUPER_ADMIN') ?? false;
 
     if (this.data.isEdit && this.data.user) {
-      // For editing, determine user type from roles array
-      const userType = this.data.user.roles?.includes('ADMIN') ? 'admin' : 'user';
+      // For editing, keep existing email and name; hide role edit
       this.userForm.patchValue({
-        email: this.data.user.email,
-        userType: userType
+        name: this.data.user.name || '',
+        email: this.data.user.email
       });
     }
   }
@@ -157,12 +170,13 @@ export class UserFormDialogComponent implements OnInit {
     if (this.userForm.valid) {
       const formValue = this.userForm.value;
       const userData: UserFormData = {
-        email: formValue.email,
-        userType: formValue.userType
+        name: formValue.name,
+        email: formValue.email
       };
 
       if (!this.data.isEdit) {
         userData.password = formValue.password;
+        userData.userType = formValue.userType;
       }
 
       if (this.data.isEdit && this.data.user) {

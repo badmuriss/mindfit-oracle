@@ -9,6 +9,7 @@ import java.util.Set;
 public record UserResponse(
         String id,
         String email,
+        String name,
         Set<Role> roles,
         LocalDateTime lastLogonDate,
         LocalDateTime createdAt

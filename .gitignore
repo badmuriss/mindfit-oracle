@@ -1,0 +1,14 @@
+# Root ignores
+.env
+.DS_Store
+.idea/
+.vscode/
+
+# Log files
+*.log
+
+# Node/Maven artifacts at root (defensive)
+node_modules/
+dist/
+target/
+

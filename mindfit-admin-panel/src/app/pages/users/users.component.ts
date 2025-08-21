@@ -13,6 +13,7 @@ import { Sort } from '@angular/material/sort';
 
 export interface User {
   id: string;
+  name: string;
   email: string;
   roles: string[];
   createdAt: string;
@@ -26,7 +27,7 @@ export interface User {
     DataTableComponent
   ],
   template: `
-    <div class="container mx-auto p-6">
+    <div class="container mx-auto p-4 sm:p-6">
       <app-data-table
         title="Users Management"
         [columns]="columns"
@@ -61,6 +62,7 @@ export class UsersComponent implements OnInit, OnDestroy {
   loading = false;
 
   columns: TableColumn[] = [
+    { key: 'name', label: 'Name', sortable: true },
     { key: 'email', label: 'Email', sortable: true },
     { key: 'roles', label: 'Roles', sortable: false },
     { key: 'lastLogonDate', label: 'Last Login', type: 'date', sortable: true },
@@ -127,11 +129,12 @@ export class UsersComponent implements OnInit, OnDestroy {
           if (this.currentSearch) {
             const q = this.currentSearch.toLowerCase();
             const filtered = serverData.filter(u => {
+              const name = (u.name || '').toLowerCase();
               const email = (u.email || '').toLowerCase();
               const roles = (u.roles || []).join(',').toLowerCase();
               const created = (u.createdAt || '').toLowerCase();
               const lastLogon = (u.lastLogonDate || '').toLowerCase();
-              return email.includes(q) || roles.includes(q) || created.includes(q) || lastLogon.includes(q);
+              return name.includes(q) || email.includes(q) || roles.includes(q) || created.includes(q) || lastLogon.includes(q);
             });
             this.users = filtered;
             this.totalElements = filtered.length;
@@ -181,6 +184,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     const dialogData: UserDialogData = {
       user: {
         id: user.id,
+        name: user.name,
         email: user.email,
         roles: user.roles,
         createdAt: user.createdAt,
@@ -240,6 +244,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     
     // Prepare request data (remove userType from payload)
     const requestData = {
+      name: userData.name,
       email: userData.email,
       password: userData.password
     };
@@ -259,7 +264,12 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   private updateUser(userData: UserFormData): void {
-    this.apiService.put(`/users/${userData.id}`, userData)
+    // Only update editable fields (name and optionally email)
+    const payload: any = {
+      name: userData.name,
+      email: userData.email
+    };
+    this.apiService.put(`/users/${userData.id}`, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
