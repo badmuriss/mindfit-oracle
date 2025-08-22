@@ -131,7 +131,23 @@ public class LogService {
             // Create log without admin check for automated logging
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
-            System.err.println("Failed to log API call: " + e.getMessage());
+            System.err.println("Failed to log error: " + e.getMessage());
+        }
+    }
+    
+    public void logWarning(String category, String name, String details) {
+        try {
+            LogCreateRequest request = new LogCreateRequest(
+                LogType.WARNING,
+                category,
+                name,
+                details,
+                LocalDateTime.now()
+            );
+            // Create log without admin check for automated logging
+            logRepository.save(logMapper.toEntity(request));
+        } catch (Exception e) {
+            System.err.println("Failed to log warning: " + e.getMessage());
         }
     }
 }

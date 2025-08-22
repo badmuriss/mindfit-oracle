@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/admin/signup").hasRole("SUPER_ADMIN")
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/health/**").permitAll()
                         .requestMatchers("/logs/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )

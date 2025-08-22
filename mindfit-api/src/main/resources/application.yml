@@ -11,6 +11,16 @@ spring:
         options:
           model: gpt-4.1-nano
 
+server:
+  tomcat:
+    max-http-request-header-size: 8KB
+    max-http-form-post-size: 2MB
+    connection-timeout: 5000
+    reject-illegal-header: true
+  error:
+    include-stacktrace: never
+    include-message: never
+
 app:
   jwt:
     secret: mySecretKeyForDevelopmentPleaseChangeInProduction
