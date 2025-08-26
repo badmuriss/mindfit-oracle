@@ -2,7 +2,7 @@ package com.mindfit.api.controller;
 
 import com.mindfit.api.dto.JwtResponse;
 import com.mindfit.api.dto.LoginRequest;
-import com.mindfit.api.dto.SignupRequest;
+import com.mindfit.api.dto.UserSignupRequest;
 import com.mindfit.api.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +29,7 @@ public class AuthController {
 
     @PostMapping("/user/signup")
     @Operation(summary = "User signup")
-    public ResponseEntity<JwtResponse> userSignup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<JwtResponse> userSignup(@Valid @RequestBody UserSignupRequest request) {
         JwtResponse response = authService.registerUser(request);
         return ResponseEntity.ok(response);
     }
@@ -44,7 +44,7 @@ public class AuthController {
     @PostMapping("/admin/signup")
     @Operation(summary = "Admin signup")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ResponseEntity<JwtResponse> adminSignup(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<JwtResponse> adminSignup(@Valid @RequestBody UserSignupRequest request) {
         JwtResponse response = authService.registerAdmin(request);
         return ResponseEntity.ok(response);
     }

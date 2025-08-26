@@ -33,6 +33,7 @@ public class DataInitializer implements ApplicationRunner {
             log.info("Creating default super admin user...");
             
             User superAdmin = new User();
+            superAdmin.setName("SUPER ADMIN");
             superAdmin.setEmail(superAdminEmail);
             superAdmin.setPassword(passwordEncoder.encode("password"));
             superAdmin.setRoles(Set.of(Role.SUPER_ADMIN));

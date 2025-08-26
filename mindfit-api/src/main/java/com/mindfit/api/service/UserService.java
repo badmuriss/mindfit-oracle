@@ -3,7 +3,6 @@ package com.mindfit.api.service;
 import com.mindfit.api.common.exception.BadRequestException;
 import com.mindfit.api.common.exception.ResourceNotFoundException;
 import com.mindfit.api.common.exception.UnauthorizedException;
-import com.mindfit.api.dto.UserCreateRequest;
 import com.mindfit.api.dto.UserDto;
 import com.mindfit.api.dto.UserUpdateRequest;
 import com.mindfit.api.model.User;
@@ -46,21 +45,6 @@ public class UserService {
         return userMapper.toDto(user);
     }
 
-    public UserDto create(UserCreateRequest request) {
-        if (!SecurityUtil.isAdmin()) {
-            throw new UnauthorizedException("Only admins can create users");
-        }
-        
-        if (userRepository.existsByEmail(request.email())) {
-            throw new BadRequestException("Email already exists");
-        }
-
-        User user = userMapper.toEntity(request);
-        user.setPassword(passwordEncoder.encode(request.password()));
-        user = userRepository.save(user);
-        
-        return userMapper.toDto(user);
-    }
 
     public UserDto update(String id, UserUpdateRequest request) {
         if (!SecurityUtil.isAdmin() && !id.equals(SecurityUtil.getCurrentUserId())) {
@@ -76,11 +60,7 @@ public class UserService {
         }
 
         userMapper.updateEntity(request, user);
-        
-        if (request.password() != null) {
-            user.setPassword(passwordEncoder.encode(request.password()));
-        }
-        
+
         user = userRepository.save(user);
         return userMapper.toDto(user);
     }

@@ -1,7 +1,7 @@
 package com.mindfit.api.mapper;
 
 import com.mindfit.api.model.User;
-import com.mindfit.api.dto.UserCreateRequest;
+import com.mindfit.api.dto.UserSignupRequest;
 import com.mindfit.api.dto.UserDto;
 import com.mindfit.api.dto.UserResponse;
 import com.mindfit.api.dto.UserDetailResponse;
@@ -11,44 +11,45 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-public interface UserMapper {
+@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE, uses = {com.mindfit.api.mapper.PasswordEncodingMapper.class})
+public abstract class UserMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "password", source = "password", qualifiedByName = "encodePassword")
+    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "profile", ignore = true)
+    @Mapping(target = "lastLogonDate", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    public abstract UserDto toDto(UserSignupRequest request);
+
+    @Mapping(target = "password", source = "password", qualifiedByName = "encodePassword")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "profile", ignore = true)
+    @Mapping(target = "lastLogonDate", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "enabled", ignore = true)
     @Mapping(target = "accountNonExpired", ignore = true)
     @Mapping(target = "accountNonLocked", ignore = true)
     @Mapping(target = "credentialsNonExpired", ignore = true)
     @Mapping(target = "authorities", ignore = true)
-    User toEntity(UserCreateRequest request);
+    public abstract void updateEntity(UserUpdateRequest request, @MappingTarget User user);
 
-    @Mapping(target = "password", ignore = true)
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "enabled", ignore = true)
-    @Mapping(target = "accountNonExpired", ignore = true)
-    @Mapping(target = "accountNonLocked", ignore = true)
-    @Mapping(target = "credentialsNonExpired", ignore = true)
-    @Mapping(target = "authorities", ignore = true)
-    void updateEntity(UserUpdateRequest request, @MappingTarget User user);
+    public abstract UserResponse toResponse(User user);
 
-    UserResponse toResponse(User user);
+    public abstract UserResponse toResponse(UserDto dto);
 
-    UserResponse toResponse(UserDto dto);
+    public abstract UserDetailResponse toDetailResponse(User user);
 
-    UserDetailResponse toDetailResponse(User user);
-
-    UserDetailResponse toDetailResponse(UserDto dto);
+    public abstract UserDetailResponse toDetailResponse(UserDto dto);
 
     @Mapping(target = "password", source = "password")
-    UserDto toDto(User user);
+    public abstract UserDto toDto(User user);
 
     @Mapping(target = "enabled", ignore = true)
     @Mapping(target = "accountNonExpired", ignore = true)
     @Mapping(target = "accountNonLocked", ignore = true)
     @Mapping(target = "credentialsNonExpired", ignore = true)
     @Mapping(target = "authorities", ignore = true)
-    User toEntity(UserDto dto);
+    public abstract User toEntity(UserDto dto);
 }
