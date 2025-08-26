@@ -12,7 +12,6 @@ import com.mindfit.api.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 
@@ -23,7 +22,6 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-    private final PasswordEncoder passwordEncoder;
 
     public Page<UserDto> findAll(Pageable pageable) {
         if (!SecurityUtil.isAdmin()) {
@@ -47,31 +45,62 @@ public class UserService {
 
 
     public UserDto update(String id, UserUpdateRequest request) {
-        if (!SecurityUtil.isAdmin() && !id.equals(SecurityUtil.getCurrentUserId())) {
-            throw new UnauthorizedException("Users can only update their own profile");
-        }
-        
-        User user = userRepository.findById(id)
+        User targetUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        
+        // Check permissions based on roles
+        if (!canUpdateUser(targetUser)) {
+            throw new UnauthorizedException("Insufficient permissions to update this user");
+        }
 
-        if (request.email() != null && !request.email().equals(user.getEmail()) 
+        if (request.email() != null && !request.email().equals(targetUser.getEmail()) 
                 && userRepository.existsByEmail(request.email())) {
             throw new BadRequestException("Email already exists");
         }
 
-        userMapper.updateEntity(request, user);
+        userMapper.updateEntity(request, targetUser);
 
-        user = userRepository.save(user);
-        return userMapper.toDto(user);
+        targetUser = userRepository.save(targetUser);
+        return userMapper.toDto(targetUser);
+    }
+    
+    
+    private boolean canUpdateUser(User targetUser) {
+        String currentUserId = SecurityUtil.getCurrentUserId();
+        
+        // Users can always update themselves
+        if (targetUser.getId().equals(currentUserId)) {
+            return true;
+        }
+        
+        // SUPER_ADMIN users can only be updated by themselves
+        boolean targetIsSuperAdmin = targetUser.getRoles().stream()
+                .anyMatch(role -> role.name().equals("SUPER_ADMIN"));
+        if (targetIsSuperAdmin) {
+            return false;
+        }
+        
+        // SUPER_ADMIN can update anyone except other SUPER_ADMINs
+        if (SecurityUtil.isSuperAdmin()) {
+            return true;
+        }
+        
+        // Regular ADMIN can only update users with USER role
+        if (SecurityUtil.isRegularAdmin()) {
+            return targetUser.getRoles().stream()
+                    .allMatch(role -> role.name().equals("USER"));
+        }
+        
+        // Regular users cannot update others
+        return false;
     }
 
     public void delete(String id) {
-        if (!SecurityUtil.isAdmin() && !id.equals(SecurityUtil.getCurrentUserId())) {
-            throw new UnauthorizedException("Users can only delete their own profile");
-        }
+        User targetUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+        if (!canUpdateUser(targetUser)) {
+            throw new UnauthorizedException("Insufficient permissions to delete this user");
         }
         
         userRepository.deleteById(id);
