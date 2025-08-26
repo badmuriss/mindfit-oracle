@@ -36,4 +36,17 @@ public class SecurityUtil {
         return currentUser.getRoles().stream()
                 .anyMatch(role -> role.name().equals("ADMIN") || role.name().equals("SUPER_ADMIN"));
     }
+    
+    public static boolean isSuperAdmin() {
+        User currentUser = getCurrentUser();
+        return currentUser.getRoles().stream()
+                .anyMatch(role -> role.name().equals("SUPER_ADMIN"));
+    }
+    
+    public static boolean isRegularAdmin() {
+        User currentUser = getCurrentUser();
+        return currentUser.getRoles().stream()
+                .anyMatch(role -> role.name().equals("ADMIN")) &&
+               !isSuperAdmin();
+    }
 }
