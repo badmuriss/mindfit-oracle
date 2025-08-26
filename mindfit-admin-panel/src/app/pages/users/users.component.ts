@@ -10,6 +10,7 @@ import { ToastService } from '../../shared/services/toast.service';
 import { UserFormDialogComponent, UserDialogData, UserFormData } from '../../shared/components/user-form-dialog/user-form-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 import { Sort } from '@angular/material/sort';
+import { AuthService } from '../../auth/auth.service';
 
 export interface User {
   id: string;
@@ -74,20 +75,22 @@ export class UsersComponent implements OnInit, OnDestroy {
     {
       icon: 'visibility',
       label: 'View Details',
-      handler: (user) => this.viewUser(user),
+      handler: (user: User) => this.viewUser(user),
       color: 'primary'
     },
     {
       icon: 'edit',
       label: 'Edit',
-      handler: (user) => this.editUser(user),
-      color: 'accent'
+      handler: (user: User) => this.editUser(user),
+      color: 'accent',
+      visible: (user: User) => this.canEditUser(user)
     },
     {
       icon: 'delete',
       label: 'Delete',
-      handler: (user) => this.deleteUser(user),
-      color: 'warn'
+      handler: (user: User) => this.deleteUser(user),
+      color: 'warn',
+      visible: (user: User) => this.canEditUser(user)
     }
   ];
 
@@ -99,7 +102,8 @@ export class UsersComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private router: Router,
     private toast: ToastService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -181,6 +185,11 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   editUser(user: User): void {
+    if (!this.canEditUser(user)) {
+      this.toast.error('You do not have permission to edit this user');
+      return;
+    }
+
     const dialogData: UserDialogData = {
       user: {
         id: user.id,
@@ -206,6 +215,11 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   deleteUser(user: User): void {
+    if (!this.canEditUser(user)) {
+      this.toast.error('You do not have permission to delete this user');
+      return;
+    }
+
     if (confirm(`Are you sure you want to delete user ${user.email}?`)) {
       this.apiService.delete(`/users/${user.id}`)
         .pipe(takeUntil(this.destroy$))
@@ -264,11 +278,17 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   private updateUser(userData: UserFormData): void {
-    // Only update editable fields (name and optionally email)
+    // Update editable fields (name, email, and optionally password)
     const payload: any = {
       name: userData.name,
       email: userData.email
     };
+    
+    // Include password if provided
+    if (userData.password && userData.password.trim()) {
+      payload.password = userData.password;
+    }
+    
     this.apiService.put(`/users/${userData.id}`, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -281,5 +301,33 @@ export class UsersComponent implements OnInit, OnDestroy {
           this.toast.error('Failed to update user');
         }
       });
+  }
+
+  private canEditUser(user: User): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser || !currentUser.roles) {
+      return false;
+    }
+
+    const isSuperAdmin = currentUser.roles.includes('SUPER_ADMIN');
+    const isAdmin = currentUser.roles.includes('ADMIN');
+    const targetIsSuperAdmin = user.roles?.includes('SUPER_ADMIN');
+    const targetIsAdmin = user.roles?.includes('ADMIN');
+
+    // Super admin can edit anyone except other super admins (unless it's themselves)
+    if (isSuperAdmin) {
+      if (targetIsSuperAdmin) {
+        return currentUser.email === user.email; // Can only edit themselves
+      }
+      return true; // Can edit admins and regular users
+    }
+
+    // Admin can only edit regular users (not other admins or super admins)
+    if (isAdmin) {
+      return !targetIsAdmin && !targetIsSuperAdmin;
+    }
+
+    // Regular users cannot edit anyone
+    return false;
   }
 }

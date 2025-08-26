@@ -71,12 +71,12 @@ export interface UserDialogData {
           </mat-error>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="w-full" *ngIf="!data.isEdit">
-          <mat-label>Password</mat-label>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>{{ data.isEdit ? 'New Password (optional)' : 'Password' }}</mat-label>
           <input matInput 
                  [type]="hidePassword ? 'password' : 'text'"
                  formControlName="password"
-                 placeholder="Enter password">
+                 [placeholder]="data.isEdit ? 'Leave empty to keep current password' : 'Enter password'">
           <button matSuffix 
                   mat-icon-button 
                   type="button"
@@ -84,7 +84,7 @@ export interface UserDialogData {
             <mat-icon>{{hidePassword ? 'visibility' : 'visibility_off'}}</mat-icon>
           </button>
           <mat-error *ngIf="userForm.get('password')?.invalid && userForm.get('password')?.touched">
-            Password must be at least 6 characters
+            {{ data.isEdit ? 'Password must be at least 6 characters if provided' : 'Password must be at least 6 characters' }}
           </mat-error>
         </mat-form-field>
 
@@ -143,7 +143,7 @@ export class UserFormDialogComponent implements OnInit {
     this.userForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', this.data.isEdit ? [] : [Validators.required, Validators.minLength(6)]],
+      password: ['', this.data.isEdit ? [Validators.minLength(6)] : [Validators.required, Validators.minLength(6)]],
       userType: ['user', [Validators.required]]
     });
   }
@@ -177,6 +177,8 @@ export class UserFormDialogComponent implements OnInit {
       if (!this.data.isEdit) {
         userData.password = formValue.password;
         userData.userType = formValue.userType;
+      } else if (formValue.password && formValue.password.trim()) {
+        userData.password = formValue.password;
       }
 
       if (this.data.isEdit && this.data.user) {

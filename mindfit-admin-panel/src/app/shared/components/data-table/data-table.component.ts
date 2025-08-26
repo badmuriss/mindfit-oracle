@@ -27,6 +27,7 @@ export interface TableAction {
   label: string;
   handler: (item: any) => void;
   color?: string;
+  visible?: (item: any) => boolean;
 }
 
 export interface TableFilters {
@@ -130,13 +131,15 @@ export interface TableFilters {
                     {{ element[column.key] }}
                   </span>
                   <div *ngSwitchCase="'actions'" class="flex gap-2">
-                    <button *ngFor="let action of actions"
-                            mat-icon-button
-                            [color]="action.color || 'primary'"
-                            [matTooltip]="action.label"
-                            (click)="action.handler(element)">
-                      <mat-icon>{{ action.icon }}</mat-icon>
-                    </button>
+                    <ng-container *ngFor="let action of actions">
+                      <button *ngIf="!action.visible || action.visible(element)"
+                              mat-icon-button
+                              [color]="action.color || 'primary'"
+                              [matTooltip]="action.label"
+                              (click)="$event.preventDefault(); $event.stopPropagation(); action.handler(element)">
+                        <mat-icon>{{ action.icon }}</mat-icon>
+                      </button>
+                    </ng-container>
                   </div>
                   <span *ngSwitchDefault>
                     {{ element[column.key] }}
