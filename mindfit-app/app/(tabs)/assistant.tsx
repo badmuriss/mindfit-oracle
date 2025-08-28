@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+import { API_ENDPOINTS } from '../../constants/Api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -24,7 +25,7 @@ export default function AssistantScreen() {
     }
     setSending(true);
     try {
-      const resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}/chatbot`, {
+      const resp = await fetch(API_ENDPOINTS.USERS.CHATBOT(userId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ prompt: userText }),

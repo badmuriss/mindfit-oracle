@@ -13,7 +13,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final ApiLoggingInterceptor apiLoggingInterceptor;
 
-    @Value("${app.cors.allowed-origins:http://localhost:4200,http://localhost:3000,http://localhost:5173}")
+    @Value("${app.cors.allowed-origins:http://localhost:4200,http://localhost:3000,http://localhost:5173,http://localhost:8081}")
     private String allowedOrigins;
 
     @Override

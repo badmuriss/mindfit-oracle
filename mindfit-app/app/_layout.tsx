@@ -1,10 +1,10 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
-import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { UserProvider, useUser } from '../components/UserContext';
 
@@ -13,30 +13,11 @@ function AuthProtectedLayout() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Configurar fullscreen para mobile
+  // Configurar UI do sistema para mobile
   useEffect(() => {
     if (Platform.OS === 'android') {
-      // Configurar para fullscreen no Android - mais agressivo
+      // Configuração mais sutil para Android
       SystemUI.setBackgroundColorAsync('transparent');
-      
-      // Esconder completamente a barra de navegação
-      NavigationBar.setVisibilityAsync('hidden');
-      NavigationBar.setBehaviorAsync('overlay-swipe');
-      NavigationBar.setBackgroundColorAsync('transparent');
-      
-      // Força a UI do sistema a ficar escondida
-      const hideSystemUI = () => {
-        SystemUI.setBackgroundColorAsync('transparent');
-        NavigationBar.setVisibilityAsync('hidden');
-      };
-      
-      // Esconde a UI imediatamente e quando a tela ganha foco
-      hideSystemUI();
-      
-      // Re-esconde quando o usuário toca na tela (caso apareça)
-      const interval = setInterval(hideSystemUI, 3000);
-      
-      return () => clearInterval(interval);
     }
   }, []);
 
@@ -107,10 +88,12 @@ function AuthProtectedLayout() {
 
 export default function RootLayout() {
   return (
-    <UserProvider>
-      <AuthProtectedLayout />
-      <FlashMessage position="top" />
-    </UserProvider>
+    <SafeAreaProvider>
+      <UserProvider>
+        <AuthProtectedLayout />
+        <FlashMessage position="top" />
+      </UserProvider>
+    </SafeAreaProvider>
   );
 }
 

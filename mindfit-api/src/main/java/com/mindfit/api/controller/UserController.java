@@ -2,7 +2,7 @@ package com.mindfit.api.controller;
 
 import com.mindfit.api.dto.*;
 import com.mindfit.api.service.UserService;
-import com.mindfit.api.service.ProfileGenerationService;
+import com.mindfit.api.service.ChatbotService;
 import com.mindfit.api.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    private final ProfileGenerationService profileGenerationService;
+    private final ChatbotService chatbotService;
     private final UserMapper userMapper;
 
     @GetMapping
@@ -54,10 +54,9 @@ public class UserController {
     }
     
     @PostMapping("/{id}/generate-profile")
-    @Operation(summary = "Generate user profile based on their activity data")
+    @Operation(summary = "Generate user profile based on their registration data")
     public UserProfileResponse generateUserProfile(@PathVariable String id) {
-        String profile = profileGenerationService.generateUserProfile(id);
-        profileGenerationService.updateUserProfile(id, profile);
+        String profile = chatbotService.generateUserProfile(id);
         return new UserProfileResponse(profile);
     }
 }

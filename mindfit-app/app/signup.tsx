@@ -7,6 +7,7 @@ import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View }
 import { showMessage } from 'react-native-flash-message';
 import { Button, TextInput } from 'react-native-paper';
 import { useUser } from '../components/UserContext';
+import { API_ENDPOINTS } from '../constants/Api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -42,7 +43,7 @@ export default function SignupScreen() {
       return;
     }
     try {
-      const response = await fetch('https://mindfitapi.outis.com.br/auth/user/signup', {
+      const response = await fetch(API_ENDPOINTS.AUTH.SIGNUP, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, userType: 'User' }),
@@ -75,7 +76,7 @@ export default function SignupScreen() {
   const userId = data.id || (data.user && data.user.id) || null;
         if (!possibleName && userId) {
           try {
-            const profileResp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}`, {
+            const profileResp = await fetch(API_ENDPOINTS.USERS.PROFILE(userId), {
               headers: { Authorization: `Bearer ${data.token}`, 'Content-Type': 'application/json' },
             });
             if (profileResp.ok) {

@@ -29,8 +29,13 @@ public class ChatbotService {
     private static final int MAX_TURNS = 10; // keep last 10 user-assistant exchanges
 
     public ChatResponse chat(String userId, ChatRequest request) {
-        // Get user profile for personalization
+        Deque<String> history = conversations.computeIfAbsent(userId, k -> new ArrayDeque<>());
+        
+        // Get user profile for personalization, generate if empty and first message
         String userProfile = getUserProfile(userId);
+        if ((userProfile == null || userProfile.trim().isEmpty()) && history.isEmpty()) {
+            userProfile = generateUserProfile(userId);
+        }
         
         String systemPreamble = "You are a certified nutrition specialist and dietitian. " +
                 "Provide evidence-based, safe, and practical guidance on nutrition, meal planning, " +
@@ -44,8 +49,6 @@ public class ChatbotService {
                 "- Use the same language as the latest user message; if unclear, use English.\n" +
                 "- Do not translate the user's text unless asked.\n" +
                 "- Avoid preambles and pleasantries; get straight to the point.";
-
-        Deque<String> history = conversations.computeIfAbsent(userId, k -> new ArrayDeque<>());
 
         // Build a rolling conversation transcript
         StringBuilder convo = new StringBuilder();
@@ -106,6 +109,50 @@ public class ChatbotService {
                     .orElse(null);
         } catch (Exception e) {
             logService.logError("CHATBOT_SERVICE", "Failed to retrieve user profile", e.getMessage());
+            return null;
+        }
+    }
+
+    public String generateUserProfile(String userId) {
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) {
+                return null;
+            }
+            
+            // Only generate profile if user has meaningful registration data
+            if (user.getName() == null || user.getName().trim().isEmpty()) {
+                return null;
+            }
+            
+            // Build profile generation prompt
+            String profilePrompt = "Based on this user registration data, generate a concise nutrition profile (max 100 words): " +
+                    "Name: " + user.getName() + 
+                    ", Email: " + user.getEmail() +
+                    ", Registration date: " + user.getCreatedAt() +
+                    ". Generate only basic demographic assumptions for nutrition guidance. " +
+                    "Keep it brief and professional.";
+            
+            OpenAiChatOptions options = OpenAiChatOptions.builder()
+                    .temperature(0.1)
+                    .maxTokens(150)
+                    .build();
+            
+            Prompt prompt = new Prompt(
+                    java.util.List.of(new UserMessage(profilePrompt)),
+                    options
+            );
+            
+            org.springframework.ai.chat.model.ChatResponse aiResponse = openAiChatModel.call(prompt);
+            String generatedProfile = aiResponse.getResult().getOutput().getText();
+            
+            // Save the generated profile to the user
+            user.setProfile(generatedProfile);
+            userRepository.save(user);
+            
+            return generatedProfile;
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to generate user profile", e.getMessage());
             return null;
         }
     }

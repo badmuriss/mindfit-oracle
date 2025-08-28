@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+import { API_ENDPOINTS } from '../../constants/Api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -44,7 +45,7 @@ const HomeScreen = () => {
     if (!token || !userId) return;
     setMeasurementLoading(true);
     try {
-      const resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}/measurements`, {
+      const resp = await fetch(API_ENDPOINTS.USERS.MEASUREMENTS(userId), {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (!resp.ok) {
@@ -60,11 +61,23 @@ const HomeScreen = () => {
       }
       items.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       
-      // Extrair histórico de peso
-      const weightHistoryData = items
+      // Extrair histórico de peso - apenas um registro por dia (o mais recente)
+      const weightByDay = new Map<string, any>();
+      
+      // Agrupar por data e manter apenas o mais recente de cada dia
+      items
         .filter((item: any) => item.weightInKG != null)
-        .slice(0, 10) // Últimos 10 registros
-        .reverse() // Ordem cronológica para o gráfico
+        .forEach((item: any) => {
+          const dateKey = new Date(item.timestamp).toDateString(); // Ex: "Mon Dec 25 2023"
+          if (!weightByDay.has(dateKey) || new Date(item.timestamp) > new Date(weightByDay.get(dateKey).timestamp)) {
+            weightByDay.set(dateKey, item);
+          }
+        });
+      
+      // Converter para array, ordenar e pegar os últimos 10 dias
+      const weightHistoryData = Array.from(weightByDay.values())
+        .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Ordem cronológica
+        .slice(-10) // Últimos 10 dias (não registros)
         .map((item: any) => ({
           weight: item.weightInKG,
           date: new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
@@ -207,7 +220,7 @@ const HomeScreen = () => {
     }
     setSaveLoading(true);
     try {
-      const resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}/measurements`, {
+      const resp = await fetch(API_ENDPOINTS.USERS.MEASUREMENTS(userId), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, timestamp: new Date().toISOString() }),
@@ -253,8 +266,8 @@ const HomeScreen = () => {
         <Text style={styles.pageTitle}>DASHBOARD PRINCIPAL</Text>
 
   <View style={styles.grid}>
-        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/explore')}>
-          <MaterialCommunityIcons name="dumbbell" size={32} color="#0ea5e9" />
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/exercise')}>
+          <MaterialCommunityIcons name="dumbbell" size={32} color="#22c55e" />
           <Text style={styles.cardLabel}>Treinos</Text>
         </TouchableOpacity>
   <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/nutrition')}>
@@ -277,7 +290,7 @@ const HomeScreen = () => {
           <View style={styles.kpiBox}>
             <View style={styles.kpiBoxRow}>
               <View style={styles.kpiLabelRow}>
-                <MaterialCommunityIcons name="weight-kilogram" size={20} color="#0ea5e9" style={{ marginRight: 10 }} />
+                <MaterialCommunityIcons name="weight-kilogram" size={20} color="#22c55e" style={{ marginRight: 10 }} />
                 <Text style={styles.kpiLabel}>Peso Atual</Text>
               </View>
               <TouchableOpacity onPress={startEditWeight} style={styles.editButton}>
@@ -286,13 +299,23 @@ const HomeScreen = () => {
             </View>
             {editingWeight ? (
               <View>
-                <TextInput style={styles.editInput} keyboardType="numeric" value={tempWeight} onChangeText={setTempWeight} />
+                <View style={styles.inputWithUnit}>
+                  <TextInput 
+                    style={[styles.editInput, styles.inputWithUnitField]} 
+                    keyboardType="numeric" 
+                    value={tempWeight} 
+                    onChangeText={setTempWeight}
+                    placeholder="Ex: 70.5"
+                    placeholderTextColor="#94a3b8"
+                  />
+                  <Text style={styles.unitLabel}>kg</Text>
+                </View>
                 <View style={styles.editButtonsRow}>
                   <TouchableOpacity style={styles.editBtn} onPress={() => { cancelEditWeight(); }}>
                     <Text style={styles.editBtnText}>Cancelar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.editBtn, { backgroundColor: '#0ea5e9' }]}
+                    style={[styles.editBtn, { backgroundColor: '#22c55e' }]}
                     onPress={async () => {
                       const w = parseFloat(tempWeight.replace(',', '.'));
                       if (isNaN(w) || w <= 0) {
@@ -326,13 +349,23 @@ const HomeScreen = () => {
             </View>
             {editingHeight ? (
               <View>
-                <TextInput style={styles.editInput} keyboardType="numeric" value={tempHeight} onChangeText={setTempHeight} />
+                <View style={styles.inputWithUnit}>
+                  <TextInput 
+                    style={[styles.editInput, styles.inputWithUnitField]} 
+                    keyboardType="numeric" 
+                    value={tempHeight} 
+                    onChangeText={setTempHeight}
+                    placeholder="Ex: 175"
+                    placeholderTextColor="#94a3b8"
+                  />
+                  <Text style={styles.unitLabel}>cm</Text>
+                </View>
                 <View style={styles.editButtonsRow}>
                   <TouchableOpacity style={styles.editBtn} onPress={() => { cancelEditHeight(); }}>
                     <Text style={styles.editBtnText}>Cancelar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.editBtn, { backgroundColor: '#0ea5e9' }]}
+                    style={[styles.editBtn, { backgroundColor: '#22c55e' }]}
                     onPress={async () => {
                       const h = parseInt(tempHeight, 10);
                       if (isNaN(h) || h <= 0) {
@@ -469,7 +502,7 @@ const styles = StyleSheet.create({
   },
   editInput: {
     borderWidth: 2,
-    borderColor: '#0ea5e9',
+    borderColor: '#22c55e',
     backgroundColor: '#f0f9ff',
     padding: screenWidth < 400 ? 12 : 14,
     marginTop: 10,
@@ -478,7 +511,7 @@ const styles = StyleSheet.create({
     fontSize: screenWidth < 400 ? 14 : 16,
     fontWeight: '600',
     color: '#0f172a',
-    shadowColor: '#0ea5e9',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
@@ -581,8 +614,8 @@ const styles = StyleSheet.create({
     height: screenWidth < 400 ? 40 : 52,
     borderRadius: screenWidth < 400 ? 20 : 26,
     borderWidth: 3,
-    borderColor: '#0ea5e9',
-    shadowColor: '#0ea5e9',
+    borderColor: '#22c55e',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -748,7 +781,7 @@ const styles = StyleSheet.create({
   },
   chartLine: {
     height: 3,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#22c55e',
     borderRadius: 2,
   },
   chartPoint: {
@@ -760,10 +793,10 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#22c55e',
     borderWidth: 3,
     borderColor: '#ffffff',
-    shadowColor: '#0ea5e9',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
@@ -774,7 +807,7 @@ const styles = StyleSheet.create({
     top: -30,
     minWidth: 40,
     alignItems: 'center',
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#22c55e',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
@@ -797,6 +830,32 @@ const styles = StyleSheet.create({
     fontSize: screenWidth < 400 ? 10 : 11,
     color: '#475569',
     fontWeight: '600',
+  },
+  inputWithUnit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  inputWithUnitField: {
+    flex: 1,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    marginBottom: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+  },
+  unitLabel: {
+    color: '#059669',
+    fontWeight: '800',
+    fontSize: 16,
+    marginLeft: 8,
+    minWidth: 30,
+    textAlign: 'right',
   },
 });
 

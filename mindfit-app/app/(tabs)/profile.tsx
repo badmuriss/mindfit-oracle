@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+import { API_ENDPOINTS } from '../../constants/Api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -26,7 +27,7 @@ export default function ProfileScreen() {
 
     setSaving(true);
     try {
-      const resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}`, {
+      const resp = await fetch(API_ENDPOINTS.USERS.PROFILE(userId), {
         method: 'PUT',
         headers: { 
           Authorization: `Bearer ${token}`, 
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <MaterialCommunityIcons name="account-circle" size={32} color="#0ea5e9" />
+        <MaterialCommunityIcons name="account-circle" size={32} color="#22c55e" />
         <Text style={styles.title}>Meu Perfil</Text>
       </View>
 
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
         <View style={styles.infoSection}>
           <View style={styles.infoItem}>
             <View style={styles.infoLabelRow}>
-              <MaterialCommunityIcons name="account" size={20} color="#0ea5e9" />
+              <MaterialCommunityIcons name="account" size={20} color="#22c55e" />
               <Text style={styles.infoLabel}>Nome</Text>
               {!editing && (
                 <TouchableOpacity onPress={() => { setTempName(userName || ''); setEditing(true); }} style={styles.editButton}>
@@ -198,8 +199,8 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 48,
     borderWidth: 4,
-    borderColor: '#0ea5e9',
-    shadowColor: '#0ea5e9',
+    borderColor: '#22c55e',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 4,
     right: '30%',
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#22c55e',
     borderRadius: 18,
     width: 36,
     height: 36,
@@ -280,7 +281,7 @@ const styles = StyleSheet.create({
   },
   editInput: {
     borderWidth: 2,
-    borderColor: '#0ea5e9',
+    borderColor: '#22c55e',
     backgroundColor: '#f0f9ff',
     padding: 16,
     borderRadius: 16,
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 16,
     color: '#0f172a',
-    shadowColor: '#0ea5e9',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
@@ -321,10 +322,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 14,
-    backgroundColor: '#0ea5e9',
+    backgroundColor: '#22c55e',
     minWidth: 88,
     alignItems: 'center',
-    shadowColor: '#0ea5e9',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,

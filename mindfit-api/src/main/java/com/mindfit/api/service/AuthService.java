@@ -28,7 +28,6 @@ public class AuthService {
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    private final ProfileGenerationService profileGenerationService;
     private final LogService logService;
 
     public JwtResponse login(LoginRequest request) {
@@ -95,13 +94,7 @@ public class AuthService {
         
         // Check if this is first login this week
         if (isFirstLoginThisWeek(lastLogOn, now)) {
-            // Generate new profile based on user's activity data
-            try {
-                String profile = profileGenerationService.generateUserProfile(user.getId());
-                user.setProfile(profile);
-            } catch (Exception e) {
-                logService.logError("AUTH_SERVICE", "Failed to generate user profile on login", e.getMessage());
-            }
+            // Profile generation is now handled by ChatbotService on first chat interaction
         }
         
         user.setLastLogonDate(now);

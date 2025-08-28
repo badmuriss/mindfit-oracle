@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+import { API_ENDPOINTS } from '../../constants/Api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -133,6 +134,7 @@ export default function NutritionScreen() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -140,6 +142,7 @@ export default function NutritionScreen() {
 
   const [name, setName] = useState('');
   const [timestamp, setTimestamp] = useState(new Date().toISOString());
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [calories, setCalories] = useState('');
   const [carbo, setCarbo] = useState('');
   const [protein, setProtein] = useState('');
@@ -149,13 +152,19 @@ export default function NutritionScreen() {
   // Confirmation dialog state
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [mealToDelete, setMealToDelete] = useState<Meal | null>(null);
+  
+  // Filter meals by selected date
+  const filteredMeals = meals.filter(meal => {
+    const mealDate = new Date(meal.timestamp);
+    return mealDate.toDateString() === selectedDate.toDateString();
+  });
 
   const loadMeals = useCallback(async () => {
     if (!token || !userId) return;
     setLoading(true);
     try {
       const pageable = encodeURIComponent(JSON.stringify({ page: 0, size: 50 }));
-      const resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}/meals?pageable=${pageable}`, {
+      const resp = await fetch(API_ENDPOINTS.USERS.MEALS(userId, pageable), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resp.ok) {
@@ -192,7 +201,16 @@ export default function NutritionScreen() {
   const openCreate = () => {
     setIsEditing(false);
     setEditingId(null);
-  setName(''); setTimestamp(new Date().toISOString()); setCalories(''); setCarbo(''); setProtein(''); setFat('');
+    setName(''); 
+    setCalories(''); 
+    setCarbo(''); 
+    setProtein(''); 
+    setFat('');
+    // Set timestamp to selected date with current time
+    const now = new Date();
+    const selectedDateTime = new Date(selectedDate);
+    selectedDateTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    setTimestamp(selectedDateTime.toISOString());
     setModalVisible(true);
   };
 
@@ -244,7 +262,7 @@ export default function NutritionScreen() {
       return;
     }
     try {
-      const url = `https://mindfitapi.outis.com.br/users/${userId}/meals/${encodeURIComponent(String(mealId))}`;
+      const url = API_ENDPOINTS.USERS.MEAL_BY_ID(userId, mealId);
       const resp = await fetch(url, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
@@ -299,13 +317,13 @@ export default function NutritionScreen() {
     try {
       let resp;
       if (isEditing && editingId) {
-        resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}/meals/${encodeURIComponent(String(editingId))}`, {
+        resp = await fetch(API_ENDPOINTS.USERS.MEAL_BY_ID(userId, editingId), {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        resp = await fetch(`https://mindfitapi.outis.com.br/users/${userId}/meals`, {
+        resp = await fetch(API_ENDPOINTS.USERS.MEALS(userId), {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -359,13 +377,51 @@ export default function NutritionScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Day Navigation */}
+      <View style={styles.dayNavigation}>
+        <TouchableOpacity 
+          style={styles.dayNavButton}
+          onPress={() => {
+            const newDate = new Date(selectedDate);
+            newDate.setDate(newDate.getDate() - 1);
+            setSelectedDate(newDate);
+          }}
+        >
+          <MaterialCommunityIcons name="chevron-left" size={24} color="#64748b" />
+        </TouchableOpacity>
+        
+        <View style={styles.dateDisplay}>
+          <Text style={styles.dateText}>
+            {selectedDate.toLocaleDateString('pt-BR', {
+              weekday: 'long',
+              day: 'numeric', 
+              month: 'long'
+            })}
+          </Text>
+          <Text style={styles.dayText}>
+            {selectedDate.toLocaleDateString('pt-BR', { year: 'numeric' })}
+          </Text>
+        </View>
+        
+        <TouchableOpacity 
+          style={styles.dayNavButton}
+          onPress={() => {
+            const newDate = new Date(selectedDate);
+            newDate.setDate(newDate.getDate() + 1);
+            setSelectedDate(newDate);
+          }}
+        >
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#64748b" />
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color="#22c55e" />
         </View>
       ) : (
         <FlatList
-          data={meals}
+          data={filteredMeals}
           keyExtractor={(m) => String(m.apiId || m.id || m.timestamp)}
           renderItem={renderMeal}
           refreshing={refreshing}
@@ -446,8 +502,91 @@ export default function NutritionScreen() {
                 placeholderTextColor="#94a3b8"
               />
 
-              <Text style={styles.label}>Data e hora (ISO)</Text>
-              <TextInput value={timestamp} editable={false} style={[styles.input, styles.inputDisabled]} />
+              <Text style={styles.label}>Data</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={selectedDate.toLocaleDateString('pt-BR')}
+                editable={false}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor="#94a3b8"
+              />
+
+              <Text style={styles.label}>Hora</Text>
+              <View style={styles.timePickerContainer}>
+                <TouchableOpacity 
+                  style={styles.timeDisplay}
+                  onPress={() => setShowTimePicker(!showTimePicker)}
+                >
+                  <MaterialCommunityIcons name="clock" size={20} color="#22c55e" style={{ marginRight: 8 }} />
+                  <Text style={styles.timeDisplayText}>
+                    {new Date(timestamp).toTimeString().slice(0, 5)}
+                  </Text>
+                  <MaterialCommunityIcons 
+                    name={showTimePicker ? "chevron-up" : "chevron-down"} 
+                    size={20} 
+                    color="#22c55e" 
+                    style={{ marginLeft: 8 }}
+                  />
+                </TouchableOpacity>
+                
+                {showTimePicker && (
+                  <View style={styles.timePickerRow}>
+                  <View style={styles.timePicker}>
+                    <Text style={styles.timeLabel}>Horas</Text>
+                    <View style={styles.hourGrid}>
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <TouchableOpacity
+                          key={i}
+                          style={[
+                            styles.hourButton,
+                            new Date(timestamp).getHours() === i && styles.hourButtonActive
+                          ]}
+                          onPress={() => {
+                            const newDate = new Date(selectedDate);
+                            newDate.setHours(i, new Date(timestamp).getMinutes(), 0, 0);
+                            setTimestamp(newDate.toISOString());
+                          }}
+                        >
+                          <Text style={[
+                            styles.hourButtonText,
+                            new Date(timestamp).getHours() === i && styles.hourButtonTextActive
+                          ]}>
+                            {String(i).padStart(2, '0')}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  
+                  <View style={styles.timePicker}>
+                    <Text style={styles.timeLabel}>Minutos</Text>
+                    <View style={styles.minuteGrid}>
+                      {Array.from({ length: 12 }, (_, i) => i * 5).map(minute => (
+                        <TouchableOpacity
+                          key={minute}
+                          style={[
+                            styles.minuteButton,
+                            Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonActive
+                          ]}
+                          onPress={() => {
+                            const newDate = new Date(selectedDate);
+                            newDate.setHours(new Date(timestamp).getHours(), minute, 0, 0);
+                            setTimestamp(newDate.toISOString());
+                          }}
+                        >
+                          <Text style={[
+                            styles.minuteButtonText,
+                            Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonTextActive
+                          ]}>
+                            {String(minute).padStart(2, '0')}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  </View>
+                )}
+              </View>
 
               <Text style={styles.label}>Calorias (kcal)</Text>
               <TextInput 
@@ -549,11 +688,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   addBtn: { 
-    backgroundColor: '#0ea5e9', 
+    backgroundColor: '#22c55e', 
     paddingVertical: 12, 
     paddingHorizontal: 20, 
     borderRadius: 16,
-    shadowColor: '#0ea5e9',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -631,7 +770,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#bae6fd',
-    shadowColor: '#0ea5e9',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
@@ -822,8 +961,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14, 
     paddingHorizontal: 20, 
     borderRadius: 14, 
-    backgroundColor: '#0ea5e9',
-    shadowColor: '#0ea5e9',
+    backgroundColor: '#22c55e',
+    shadowColor: '#22c55e',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -906,5 +1045,169 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
     letterSpacing: 0.25,
+  },
+  dateTimeContainer: {
+    marginBottom: 16,
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dateTimeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    borderRadius: 14,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#64748b',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  dateTimeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+    flex: 1,
+  },
+  // Day Navigation styles
+  dayNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dayNavButton: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+  },
+  dateDisplay: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    textTransform: 'capitalize',
+    textAlign: 'center',
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginTop: 2,
+  },
+  // Time Picker styles
+  timePickerContainer: {
+    marginBottom: 16,
+  },
+  timeDisplay: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#22c55e',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  timeDisplayText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#22c55e',
+    letterSpacing: 2,
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  timePicker: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  hourGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    justifyContent: 'center',
+  },
+  hourButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  hourButtonActive: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  hourButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  hourButtonTextActive: {
+    color: '#ffffff',
+  },
+  minuteGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  minuteButton: {
+    width: 42,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  minuteButtonActive: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  minuteButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  minuteButtonTextActive: {
+    color: '#ffffff',
   },
 });
