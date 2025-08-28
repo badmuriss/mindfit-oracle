@@ -1,6 +1,6 @@
 # MindFit - Complete Fitness Management Platform
 
-A comprehensive full-stack fitness management platform with AI-powered features, built with Spring Boot, Angular, and MongoDB.
+A comprehensive full-stack fitness management platform with AI-powered features, built with Spring Boot, Angular, Expo/React Native Web, and MongoDB.
 
 ## 🌟 Features
 
@@ -32,7 +32,9 @@ A comprehensive full-stack fitness management platform with AI-powered features,
 - **API Documentation**: Swagger/OpenAPI 3.0
 - **Rate Limiting**: Built-in rate limiting for API protection
 
-### Frontend (Angular Admin Panel)
+### Frontend
+- **Admin Panel (Angular 20)**: Manage users, data, and system settings
+- **App (Expo/React Native Web)**: End-user experience for logging meals, exercises, measurements, and chatting with the AI assistant
 - **Framework**: Angular 20 with standalone components
 - **UI Library**: Angular Material + TailwindCSS
 - **State Management**: Reactive forms and services
@@ -74,10 +76,10 @@ JWT_SECRET=mySecretKeyForDevelopmentPleaseChangeInProduction12345678901234567890
 OPENAI_API_KEY=your-openai-api-key-here
 
 # CORS Configuration
-APP_CORS_ALLOWED_ORIGINS=http://localhost:8081,http://localhost:4200
+APP_CORS_ALLOWED_ORIGINS=http://localhost:8082,http://localhost:8083,http://localhost:4200
 
-# Admin Panel Configuration
-API_BASE_URL=http://localhost:8080
+# Frontend/API Configuration
+API_BASE_URL=http://localhost:8088
 ```
 
 ### 3. Start the Application
@@ -87,20 +89,24 @@ docker-compose up --build
 
 This will start all services:
 - **MongoDB**: Database server (internal port 27017)
-- **API**: Spring Boot backend (http://localhost:8080)
-- **Admin Panel**: Angular frontend (http://localhost:8081)
+- **API**: Spring Boot backend (http://localhost:8088)
+- **Admin Panel**: Angular frontend (http://localhost:8082)
+- **App (Web)**: Expo/React Native Web (http://localhost:8083)
 
 ### 4. Access the Application
 
 #### Admin Panel
-- **URL**: http://localhost:8081
+- **URL**: http://localhost:8082
 - **Default Admin Credentials**:
   - Email: `admin@example.com`
   - Password: `password`
 
 #### API Documentation
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **API Docs**: http://localhost:8080/api-docs
+- **Swagger UI**: http://localhost:8088/swagger-ui.html
+- **API Docs**: http://localhost:8088/api-docs
+
+#### App (Web)
+- **URL**: http://localhost:8083
 
 ## 🔐 Default Admin Account
 
@@ -115,38 +121,42 @@ The system automatically creates a super admin account on first startup:
 ## 📱 API Endpoints
 
 ### Authentication
+- `POST /auth/user/login` - User login
+- `POST /auth/user/signup` - User registration
 - `POST /auth/admin/login` - Admin login
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
+- `POST /auth/admin/signup` - Admin registration (SUPER_ADMIN only)
 
 ### User Management
 - `GET /users` - List all users (Admin only)
 - `GET /users/{id}` - Get user details
-- `POST /users` - Create user (Admin only)
 - `PUT /users/{id}` - Update user
 - `DELETE /users/{id}` - Delete user
+- `POST /users/{id}/generate-profile` - Generate profile for a user (AI)
 
-### Meal Tracking
-- `GET /meals` - Get user meals
-- `POST /meals` - Log new meal
-- `PUT /meals/{id}` - Update meal
-- `DELETE /meals/{id}` - Delete meal
+### Meal Tracking (scoped to user)
+- `GET /users/{userId}/meals` - List meals (optional date range, pagination)
+- `GET /users/{userId}/meals/{id}` - Get meal by ID
+- `POST /users/{userId}/meals` - Create new meal
+- `PUT /users/{userId}/meals/{id}` - Update meal
+- `DELETE /users/{userId}/meals/{id}` - Delete meal
 
-### Exercise Tracking
-- `GET /exercises` - Get user exercises
-- `POST /exercises` - Log new exercise
-- `PUT /exercises/{id}` - Update exercise
-- `DELETE /exercises/{id}` - Delete exercise
+### Exercise Tracking (scoped to user)
+- `GET /users/{userId}/exercises` - List exercises (optional date range, pagination)
+- `GET /users/{userId}/exercises/{id}` - Get exercise by ID
+- `POST /users/{userId}/exercises` - Create new exercise
+- `PUT /users/{userId}/exercises/{id}` - Update exercise
+- `DELETE /users/{userId}/exercises/{id}` - Delete exercise
 
-### Measurements
-- `GET /measurements` - Get user measurements
-- `POST /measurements` - Log new measurement
-- `PUT /measurements/{id}` - Update measurement
-- `DELETE /measurements/{id}` - Delete measurement
+### Measurements (scoped to user)
+- `GET /users/{userId}/measurements` - List measurements (optional date range, pagination)
+- `GET /users/{userId}/measurements/{id}` - Get measurement by ID
+- `POST /users/{userId}/measurements` - Create new measurement
+- `PUT /users/{userId}/measurements/{id}` - Update measurement
+- `DELETE /users/{userId}/measurements/{id}` - Delete measurement
 
 ### AI Features
-- `POST /chatbot/chat` - Chat with AI assistant
-- `POST /profile/generate` - Generate AI profile
+- `POST /users/{userId}/chatbot` - Chat with AI assistant
+- `DELETE /users/{userId}/chatbot/history` - Clear chatbot history
 
 ### Logging
 - `GET /logs` - Get system logs (Admin only)
@@ -160,7 +170,7 @@ cd mindfit-api
 ./mvnw spring-boot:run
 ```
 
-The API will be available at http://localhost:8080
+The API will be available at http://localhost:8088
 
 ### Frontend Development
 ```bash
@@ -170,6 +180,16 @@ npm start
 ```
 
 The admin panel will be available at http://localhost:4200
+
+### App (Web) Development
+If you want to run the Expo app locally for web:
+```bash
+cd mindfit-app
+npm install
+npm run web
+```
+
+The app (web) will be available at http://localhost:19006 by default (Expo dev server), or use `docker compose` for the production-like build at http://localhost:8083.
 
 ### Database Access
 ```bash
@@ -347,7 +367,7 @@ docker-compose up --build mindfit-admin-panel
 
 For support and questions:
 1. Check the troubleshooting section above
-2. Review the API documentation at http://localhost:8080/swagger-ui.html
+2. Review the API documentation at http://localhost:8088/swagger-ui.html
 3. Check application logs for error details
 4. Create an issue in the repository for bugs or feature requests
 
