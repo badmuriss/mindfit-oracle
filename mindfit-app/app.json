@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "mindfit-react-native",
+    "slug": "mindfit-react-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "mindfitreactnative",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "statusBarStyle": "light",
+    "statusBarHidden": true,
+    "ios": {
+      "supportsTablet": true,
+      "statusBarStyle": "auto"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "statusBar": {
+        "translucent": true,
+        "backgroundColor": "transparent",
+        "barStyle": "light-content",
+        "hidden": true
+      },
+      "navigationBar": {
+        "visible": "sticky-immersive",
+        "backgroundColor": "transparent"
+      },
+      "softwareKeyboardLayoutMode": "pan",
+      "splashScreen": {
+        "resizeMode": "cover"
+      },
+      "package": "com.anonymous.mindfitreactnative"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-navigation-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-system-ui",
+        {
+          "userInterfaceStyle": "automatic"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
