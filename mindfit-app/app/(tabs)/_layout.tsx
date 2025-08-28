@@ -54,6 +54,16 @@ export default function TabsLayout() {
         }} 
       />
       <Tabs.Screen 
+        name="nutrition" 
+        options={{ 
+          title: 'Nutrição',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="food-apple" size={size} color={color} />
+          ),
+        }} 
+      />
+      <Tabs.Screen 
         name="profile" 
         options={{ 
           title: 'Perfil',

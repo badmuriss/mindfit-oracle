@@ -45,7 +45,7 @@ export default function AssistantScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="chatbubbles" size={28} color="#0ea5e9" />
+        <Ionicons name="chatbubbles" size={32} color="#8b5cf6" />
         <Text style={styles.title}>Assistente MindFit</Text>
       </View>
       
@@ -54,11 +54,36 @@ export default function AssistantScreen() {
         keyExtractor={(_, i) => String(i)}
         renderItem={({ item }) => (
           <View style={[styles.msg, item.from === 'user' ? styles.msgUser : styles.msgBot]}>
-            <Text style={[styles.msgText, item.from === 'user' && { color: '#fff' }]}>{item.text}</Text>
+            <Text style={[styles.msgText, item.from === 'user' && { color: '#fff', fontWeight: '600' }]}>{item.text}</Text>
           </View>
         )}
-        contentContainerStyle={styles.messagesList}
+        contentContainerStyle={[styles.messagesList, messages.length === 0 && { justifyContent: 'center', alignItems: 'center' }]}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <Ionicons name="chatbubbles-outline" size={80} color="#cbd5e1" />
+            <Text style={{ 
+              color: '#64748b', 
+              marginTop: 20, 
+              textAlign: 'center',
+              fontSize: 18,
+              fontWeight: '700',
+            }}>
+              Olá! Como posso ajudar?
+            </Text>
+            <Text style={{ 
+              color: '#94a3b8', 
+              marginTop: 8, 
+              textAlign: 'center',
+              fontSize: 15,
+              fontWeight: '500',
+              maxWidth: 280,
+              lineHeight: 22,
+            }}>
+              Faça perguntas sobre treinos, nutrição ou qualquer dúvida sobre fitness
+            </Text>
+          </View>
+        }
       />
       
       <View style={styles.inputContainer}>
@@ -67,7 +92,7 @@ export default function AssistantScreen() {
             value={input} 
             onChangeText={setInput} 
             style={styles.input} 
-            placeholder="Diga algo ao assistente..." 
+            placeholder="Faça uma pergunta ao assistente..." 
             placeholderTextColor="#94a3b8"
             multiline
             maxLength={500}
@@ -80,7 +105,7 @@ export default function AssistantScreen() {
             {sending ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Ionicons name="send" size={20} color="#fff" />
+              <Ionicons name="send" size={22} color="#fff" />
             )}
           </TouchableOpacity>
         </View>
@@ -92,62 +117,81 @@ export default function AssistantScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 16,
-    backgroundColor: '#fff',
+    padding: 24,
+    paddingTop: 20,
+    paddingBottom: 20,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: { 
-    fontSize: 24, 
-    fontWeight: '800', 
-    marginLeft: 12,
-    color: '#1e293b',
+    fontSize: 26, 
+    fontWeight: '900', 
+    marginLeft: 16,
+    color: '#0f172a',
+    letterSpacing: -0.5,
   },
   messagesList: {
-    padding: 20,
-    paddingBottom: 16,
+    padding: 24,
+    paddingBottom: 20,
     flexGrow: 1,
   },
   inputContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
+    backgroundColor: '#ffffff',
+    padding: 24,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: -2 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   inputRow: { 
     flexDirection: 'row', 
     alignItems: 'flex-end',
-    gap: 12,
+    gap: 16,
   },
   input: { 
     flex: 1, 
     borderWidth: 2, 
-    borderColor: '#e2e8f0', 
-    borderRadius: 16, 
-    padding: 16,
+    borderColor: '#cbd5e1', 
+    borderRadius: 20, 
+    padding: 18,
+    paddingTop: 18,
     fontSize: 16,
-    backgroundColor: '#fff',
+    fontWeight: '600',
+    backgroundColor: '#ffffff',
     maxHeight: 120,
-    color: '#1e293b',
+    color: '#0f172a',
+    shadowColor: '#64748b',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
   },
   sendButton: {
-    backgroundColor: '#0ea5e9',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    backgroundColor: '#8b5cf6',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0ea5e9',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#8b5cf6',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 6,
   },
   sendButtonDisabled: {
     backgroundColor: '#cbd5e1',
@@ -155,31 +199,34 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   msg: { 
-    padding: 16, 
-    borderRadius: 20, 
-    marginBottom: 12, 
-    maxWidth: '80%',
-    shadowColor: '#1e293b',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 20, 
+    borderRadius: 24, 
+    marginBottom: 16, 
+    maxWidth: '85%',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
   },
   msgUser: { 
-    backgroundColor: '#0ea5e9', 
+    backgroundColor: '#8b5cf6', 
     alignSelf: 'flex-end',
-    borderBottomRightRadius: 6,
+    borderBottomRightRadius: 8,
+    shadowColor: '#8b5cf6',
+    shadowOpacity: 0.3,
   },
   msgBot: { 
-    backgroundColor: '#fff', 
+    backgroundColor: '#ffffff', 
     alignSelf: 'flex-start',
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 8,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
   },
   msgText: { 
     fontSize: 16,
-    lineHeight: 22,
-    color: '#1e293b',
+    lineHeight: 24,
+    color: '#0f172a',
+    fontWeight: '500',
   },
 });

@@ -154,7 +154,10 @@ const HomeScreen = () => {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconButton} onPress={() => showMessage({ message: 'Notificações (teste)', type: 'info' })}>
-            <Ionicons name="notifications-outline" size={22} color="#111" />
+            <Ionicons name="notifications-outline" size={24} color="#374151" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconButton, { marginRight: 12 }]} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={22} color="#374151" />
           </TouchableOpacity>
           <Image source={require('../../assets/images/logo_mindfit.png')} style={styles.avatar} />
         </View>
@@ -164,19 +167,19 @@ const HomeScreen = () => {
 
   <View style={styles.grid}>
         <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/explore')}>
-          <MaterialCommunityIcons name="dumbbell" size={28} color="#0f172a" />
+          <MaterialCommunityIcons name="dumbbell" size={32} color="#0ea5e9" />
           <Text style={styles.cardLabel}>Treinos</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.card} onPress={() => showMessage({ message: 'Nutrição (em breve)', type: 'info' })}>
-          <MaterialCommunityIcons name="food-apple" size={28} color="#0f172a" />
+  <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/nutrition')}>
+          <MaterialCommunityIcons name="food-apple" size={32} color="#10b981" />
           <Text style={styles.cardLabel}>Nutrição</Text>
         </TouchableOpacity>
   <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/assistant')}>
-          <MaterialCommunityIcons name="robot-excited" size={28} color="#0f172a" />
+          <MaterialCommunityIcons name="robot-excited" size={32} color="#8b5cf6" />
           <Text style={styles.cardLabel}>Assistente</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.card} onPress={handleLogout}>
-          <MaterialCommunityIcons name="account-cog" size={28} color="#0f172a" />
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/profile')}>
+          <MaterialCommunityIcons name="account-cog" size={32} color="#f59e0b" />
           <Text style={styles.cardLabel}>Configurações</Text>
         </TouchableOpacity>
       </View>
@@ -187,11 +190,11 @@ const HomeScreen = () => {
           <View style={styles.kpiBox}>
             <View style={styles.kpiBoxRow}>
               <View style={styles.kpiLabelRow}>
-                <MaterialCommunityIcons name="weight-kilogram" size={18} color="#0ea5e9" style={{ marginRight: 8 }} />
+                <MaterialCommunityIcons name="weight-kilogram" size={20} color="#0ea5e9" style={{ marginRight: 10 }} />
                 <Text style={styles.kpiLabel}>Peso Atual</Text>
               </View>
               <TouchableOpacity onPress={startEditWeight} style={styles.editButton}>
-                <Ionicons name="pencil" size={14} color="#0f172a" />
+                <Ionicons name="pencil" size={16} color="#374151" />
               </TouchableOpacity>
             </View>
             {editingWeight ? (
@@ -227,11 +230,11 @@ const HomeScreen = () => {
           <View style={[styles.kpiBox, styles.kpiBoxRight]}>
             <View style={styles.kpiBoxRow}>
               <View style={styles.kpiLabelRow}>
-                <MaterialCommunityIcons name="ruler" size={18} color="#06b6d4" style={{ marginRight: 8 }} />
+                <MaterialCommunityIcons name="ruler" size={20} color="#06b6d4" style={{ marginRight: 10 }} />
                 <Text style={styles.kpiLabel}>Altura Atual</Text>
               </View>
               <TouchableOpacity onPress={startEditHeight} style={styles.editButton}>
-                <Ionicons name="pencil" size={14} color="#0f172a" />
+                <Ionicons name="pencil" size={16} color="#374151" />
               </TouchableOpacity>
             </View>
             {editingHeight ? (
@@ -290,45 +293,49 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
     padding: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 8,
+    marginBottom: 28,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 4,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   subtitleSmall: {
-    color: '#64748b',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#475569',
+    fontSize: 15,
+    fontWeight: '600',
+    opacity: 0.8,
   },
   kpiRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: 24,
+    gap: 16,
   },
   kpiBox: {
     flexBasis: '48%',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: '#1e293b',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
+    backgroundColor: '#ffffff',
+    padding: 24,
+    borderRadius: 20,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    elevation: 6,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
+    position: 'relative',
   },
   kpiBoxRight: {
     marginRight: 0,
@@ -336,88 +343,113 @@ const styles = StyleSheet.create({
   kpiBoxRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
   kpiLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   editButton: {
-    padding: 8,
+    padding: 10,
     backgroundColor: '#f8fafc',
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#cbd5e1',
+    shadowColor: '#64748b',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   editInput: {
     borderWidth: 2,
     borderColor: '#0ea5e9',
     backgroundColor: '#f0f9ff',
-    padding: 12,
-    marginTop: 8,
-    borderRadius: 12,
+    padding: 14,
+    marginTop: 10,
+    borderRadius: 14,
     width: '100%',
     fontSize: 16,
     fontWeight: '600',
+    color: '#0f172a',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
   },
   editButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 12,
-    gap: 8,
+    marginTop: 16,
+    gap: 12,
   },
   editBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#cbd5e1',
+    shadowColor: '#64748b',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   editBtnText: {
-    color: '#475569',
-    fontWeight: '600',
+    color: '#374151',
+    fontWeight: '700',
     fontSize: 14,
+    letterSpacing: 0.25,
   },
   kpiLabel: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '600',
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    marginLeft: 2,
   },
   kpiValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginTop: 8,
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginTop: 12,
+    letterSpacing: -0.5,
   },
   chartCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    marginTop: 8,
-    shadowColor: '#1e293b',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 24,
-    elevation: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 12,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 30,
+    elevation: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
   },
   weightInfo: {
     flex: 1,
-    paddingRight: 16,
+    paddingRight: 20,
   },
   chartImage: {
     width: 280,
     height: 100,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    shadowColor: '#64748b',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerRight: {
     flexDirection: 'row',
@@ -425,91 +457,105 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     marginRight: 16,
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    shadowColor: '#1e293b',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 3,
     borderColor: '#0ea5e9',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
   },
   pageTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginBottom: 24,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    opacity: 0.9,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 24,
-    gap: 12,
+    marginBottom: 32,
+    gap: 16,
   },
   card: {
     width: '48%',
-    backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    padding: 28,
+    borderRadius: 24,
     alignItems: 'center',
-    shadowColor: '#1e293b',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    elevation: 6,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
+    transform: [{ scale: 1 }],
   },
   cardLabel: {
-    marginTop: 12,
-    color: '#1e293b',
-    fontWeight: '700',
-    fontSize: 14,
+    marginTop: 16,
+    color: '#0f172a',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.25,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginBottom: 20,
+    letterSpacing: -0.5,
   },
   weightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 16,
   },
   weightValue: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '900',
-    color: '#1e293b',
+    color: '#0f172a',
+    letterSpacing: -1,
   },
   weightDelta: {
     color: '#059669',
-    fontWeight: '700',
-    marginTop: 6,
-    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 8,
+    fontSize: 17,
+    letterSpacing: 0.25,
   },
   chartLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 8,
+    paddingTop: 12,
   },
   chartLabel: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -518,18 +564,22 @@ const styles = StyleSheet.create({
   summaryItem: {
     width: '32%',
     backgroundColor: '#f8fafc',
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   summaryLabel: {
-    color: '#64748b',
-    fontSize: 12,
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '600',
   },
   summaryValue: {
-    fontWeight: '700',
-    marginTop: 6,
+    fontWeight: '800',
+    marginTop: 8,
     color: '#0f172a',
+    fontSize: 16,
   },
   deltaDown: {
     color: '#059669',
@@ -538,10 +588,11 @@ const styles = StyleSheet.create({
     color: '#dc2626',
   },
   heightText: {
-    color: '#64748b',
-    fontSize: 14,
-    marginTop: 6,
-    fontWeight: '500',
+    color: '#475569',
+    fontSize: 15,
+    marginTop: 8,
+    fontWeight: '600',
+    opacity: 0.8,
   },
 });
 
