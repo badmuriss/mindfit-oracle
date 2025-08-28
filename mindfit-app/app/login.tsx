@@ -1,11 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { Button, TextInput } from 'react-native-paper';
 import { useUser } from '../components/UserContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [loading, setLoading] = React.useState(false);
@@ -220,6 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1a1333',
+    paddingTop: Platform.OS === 'android' ? Constants.statusBarHeight : 0,
   },
   gradientBg: {
     ...StyleSheet.absoluteFillObject,
@@ -231,7 +235,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: screenWidth <= 400 ? 20 : 24,
     zIndex: 1,
   },
   logo: {

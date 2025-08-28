@@ -1,8 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 type Meal = {
   id?: string;
@@ -526,7 +529,11 @@ export default function NutritionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f1f5f9', padding: 20 },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f1f5f9', 
+    padding: screenWidth <= 400 ? 16 : 20,
+  },
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 

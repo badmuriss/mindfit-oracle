@@ -61,15 +61,33 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = async () => {
-    await AsyncStorage.removeItem('userToken');
-    await AsyncStorage.removeItem('userName');
-    await AsyncStorage.removeItem('userEmail');
-    await AsyncStorage.removeItem('userId');
-    setToken(null);
-    setUserName(null);
-    setUserEmail(null);
-    setUserId(null);
-  showMessage({ message: 'Logout realizado.', type: 'success' });
+    try {
+      console.log('Starting logout process...');
+      
+      // Limpar AsyncStorage
+      await AsyncStorage.multiRemove(['userToken', 'userName', 'userEmail', 'userId']);
+      
+      // Limpar estado de forma síncrona
+      setToken(null);
+      setUserName(null);
+      setUserEmail(null);
+      setUserId(null);
+      
+      console.log('Logout completed successfully');
+      showMessage({ message: 'Logout realizado.', type: 'success' });
+      
+      // Pequeno delay para garantir que o estado seja atualizado
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      console.error('Erro durante logout:', error);
+      // Mesmo com erro, limpar o estado local
+      setToken(null);
+      setUserName(null);
+      setUserEmail(null);
+      setUserId(null);
+      showMessage({ message: 'Logout realizado (com avisos).', type: 'warning' });
+    }
   };
 
   return (

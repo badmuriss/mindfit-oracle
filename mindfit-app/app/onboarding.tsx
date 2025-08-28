@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 export default function SignupScreen() {
   return (
@@ -13,5 +14,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: Platform.OS === 'android' ? Constants.statusBarHeight : 0,
   },
 });

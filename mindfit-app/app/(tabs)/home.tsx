@@ -1,55 +1,36 @@
 // app/(tabs)/home.tsx
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 const HomeScreen = () => {
   const router = useRouter();
   const { logout } = useUser();
 
   const handleLogout = async () => {
-    await logout();
-    showMessage({ message: 'Logout realizado.', type: 'success' });
-    router.replace('/login');
+    try {
+      await logout();
+      // Forçar navegação para login após logout
+      router.replace('/login');
+    } catch (error) {
+      console.log('Erro durante logout:', error);
+      showMessage({ message: 'Erro ao fazer logout.', type: 'danger' });
+    }
   };
-
-  const weightData = [76, 75.5, 75, 74.5, 74, 73.5, 73];
-  // dates removed from UI per request
-
-  // map data to svg points
-  const width = 300;
-  const height = 100;
-  const padding = 12;
-  const minY = 72;
-  const maxY = 76;
-  const xStep = (width - padding * 2) / (weightData.length - 1);
-  const pointsArray = weightData.map((v, i) => {
-    const x = padding + i * xStep;
-    const y = padding + ((maxY - v) / (maxY - minY)) * (height - padding * 2);
-    return { x, y };
-  });
-  const points = pointsArray.map(p => `${p.x},${p.y}`).join(' ');
-  // build an inline SVG as data URI to avoid depending on react-native-svg (avoids web bundler issues)
-  const svg = `
-    <svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' viewBox='0 0 ${width} ${height}'>
-      <rect x='0' y='0' width='${width}' height='${height}' fill='white' />
-      <polyline fill='none' stroke='#0ea5e9' stroke-width='3' points='${points}' stroke-linecap='round' stroke-linejoin='round' />
-      ${pointsArray
-        .map(p => `<circle cx='${p.x}' cy='${p.y}' r='3' fill='#0ea5e9' />`)
-        .join('')}
-    </svg>
-  `;
-  const svgUri = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
   const { userName, userEmail, token, userId } = useUser();
 
   const [weightKg, setWeightKg] = useState<number | null>(null);
   const [heightCm, setHeightCm] = useState<number | null>(null);
   const [deltaKg, setDeltaKg] = useState<number | null>(null);
+  const [weightHistory, setWeightHistory] = useState<{ weight: number; date: string }[]>([]);
   const [measurementLoading, setMeasurementLoading] = useState(false);
 
   // editing state
@@ -78,6 +59,22 @@ const HomeScreen = () => {
         return;
       }
       items.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      // Extrair histórico de peso
+      const weightHistoryData = items
+        .filter((item: any) => item.weightInKG != null)
+        .slice(0, 10) // Últimos 10 registros
+        .reverse() // Ordem cronológica para o gráfico
+        .map((item: any) => ({
+          weight: item.weightInKG,
+          date: new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        }));
+      
+      setWeightHistory(weightHistoryData);
+      
+      // Debug: log para verificar os dados
+      console.log('Weight history loaded:', weightHistoryData);
+      
       const latest = items[0];
       setWeightKg(latest.weightInKG ?? null);
       setHeightCm(latest.heightInCM ?? null);
@@ -98,6 +95,93 @@ const HomeScreen = () => {
   useEffect(() => {
     loadLatest();
   }, [loadLatest]);
+
+  // Função para renderizar gráfico usando Views nativas
+  const renderWeightChart = () => {
+    let dataToUse = weightHistory;
+    
+    // Se não há dados históricos, usar dados de exemplo para demonstração
+    if (weightHistory.length === 0 && weightKg != null) {
+      const today = new Date();
+      dataToUse = [
+        { weight: weightKg - 1, date: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) },
+        { weight: weightKg, date: today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) }
+      ];
+    }
+    
+    if (dataToUse.length === 0) {
+      return null;
+    }
+
+    const chartWidth = Math.min(screenWidth * 0.8, 280);
+    const chartHeight = 120;
+    const padding = 20;
+    
+    const weights = dataToUse.map(item => item.weight);
+    const dates = dataToUse.map(item => item.date);
+    
+    const minWeight = Math.min(...weights) - 0.5;
+    const maxWeight = Math.max(...weights) + 0.5;
+    const weightRange = maxWeight - minWeight || 1;
+    
+    const xStep = (chartWidth - padding * 2) / Math.max(weights.length - 1, 1);
+    
+    const points = weights.map((weight, index) => {
+      const x = padding + index * xStep;
+      const y = padding + ((maxWeight - weight) / weightRange) * (chartHeight - padding * 2);
+      return { x, y, weight, date: dates[index] };
+    });
+
+    return (
+      <View style={[styles.chartWrapper, { width: chartWidth, height: chartHeight }]}>
+        {/* Linha de conexão entre pontos */}
+        {points.length > 1 && (
+          <View style={styles.lineContainer}>
+            {points.slice(0, -1).map((point, index) => {
+              const nextPoint = points[index + 1];
+              const lineWidth = Math.sqrt(Math.pow(nextPoint.x - point.x, 2) + Math.pow(nextPoint.y - point.y, 2));
+              const angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI;
+              
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.chartLine,
+                    {
+                      position: 'absolute',
+                      left: point.x,
+                      top: point.y,
+                      width: lineWidth,
+                      transform: [{ rotate: `${angle}deg` }],
+                      transformOrigin: '0 50%',
+                    }
+                  ]}
+                />
+              );
+            })}
+          </View>
+        )}
+        
+        {/* Pontos do gráfico */}
+        {points.map((point, index) => (
+          <View key={index} style={[styles.chartPoint, { left: point.x - 6, top: point.y - 6 }]}>
+            <View style={styles.pointDot} />
+            <View style={styles.pointLabel}>
+              <Text style={styles.pointText}>{point.weight.toFixed(1)}kg</Text>
+            </View>
+          </View>
+        ))}
+        
+        {/* Labels das datas */}
+        <View style={styles.dateLabels}>
+          <Text style={styles.dateLabel}>{dates[0]}</Text>
+          {dates.length > 1 && (
+            <Text style={styles.dateLabel}>{dates[dates.length - 1]}</Text>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   const startEditWeight = () => {
     setTempWeight(weightKg != null ? String(weightKg) : '');
@@ -146,24 +230,27 @@ const HomeScreen = () => {
   };
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Olá, {userName ? userName : userEmail ? userEmail : 'Usuário'}!</Text>
-          <Text style={styles.subtitleSmall}>Bem-vindo de volta</Text>
+    <ScrollView style={styles.screen} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>Olá, {userName ? userName : userEmail ? userEmail : 'Usuário'}!</Text>
+            <Text style={styles.subtitleSmall}>Bem-vindo de volta</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => showMessage({ message: 'Notificações (teste)', type: 'info' })}>
+              <Ionicons name="notifications-outline" size={20} color="#374151" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={18} color="#374151" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
+              <Image source={require('../../assets/images/logo_mindfit.png')} style={styles.avatar} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => showMessage({ message: 'Notificações (teste)', type: 'info' })}>
-            <Ionicons name="notifications-outline" size={24} color="#374151" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconButton, { marginRight: 12 }]} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={22} color="#374151" />
-          </TouchableOpacity>
-          <Image source={require('../../assets/images/logo_mindfit.png')} style={styles.avatar} />
-        </View>
-      </View>
 
-      <Text style={styles.pageTitle}>DASHBOARD PRINCIPAL</Text>
+        <Text style={styles.pageTitle}>DASHBOARD PRINCIPAL</Text>
 
   <View style={styles.grid}>
         <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/explore')}>
@@ -280,13 +367,23 @@ const HomeScreen = () => {
             </Text>
             <Text style={styles.heightText}>{heightCm ? `Altura: ${heightCm} cm` : ''}</Text>
           </View>
-          <Image source={{ uri: svgUri }} style={styles.chartImage} />
+          <View style={styles.chartContainer}>
+            {weightHistory.length > 0 || weightKg != null ? (
+              renderWeightChart()
+            ) : (
+              <View style={styles.noDataContainer}>
+                <MaterialCommunityIcons name="chart-line" size={32} color="#cbd5e1" />
+                <Text style={styles.noDataText}>Sem dados de peso</Text>
+                <Text style={styles.noDataSubtext}>Adicione algumas medições para ver o gráfico</Text>
+              </View>
+            )}
+          </View>
         </View>
-  {/* dates removed from chart */}
       </View>
 
-  {/* Resumo Diário removido conforme solicitado */}
-    </View>
+      {/* Resumo Diário removido conforme solicitado */}
+      </View>
+    </ScrollView>
   );
 };
 
@@ -294,18 +391,25 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f1f5f9',
-    padding: 20,
+  },
+  container: {
+    padding: screenWidth < 400 ? 16 : 20,
+    paddingBottom: 100, // Para evitar que o conteúdo fique atrás da tab bar
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 28,
+    alignItems: 'flex-start',
+    marginBottom: screenWidth < 400 ? 20 : 28,
     paddingTop: 12,
     paddingBottom: 4,
   },
+  headerLeft: {
+    flex: 1,
+    paddingRight: 16,
+  },
   greeting: {
-    fontSize: 26,
+    fontSize: screenWidth < 400 ? 22 : 26,
     fontWeight: '800',
     color: '#0f172a',
     marginBottom: 6,
@@ -313,20 +417,20 @@ const styles = StyleSheet.create({
   },
   subtitleSmall: {
     color: '#475569',
-    fontSize: 15,
+    fontSize: screenWidth < 400 ? 13 : 15,
     fontWeight: '600',
     opacity: 0.8,
   },
   kpiRow: {
-    flexDirection: 'row',
+    flexDirection: screenWidth < 400 ? 'column' : 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
     gap: 16,
   },
   kpiBox: {
-    flexBasis: '48%',
+    flexBasis: screenWidth < 400 ? '100%' : '48%',
     backgroundColor: '#ffffff',
-    padding: 24,
+    padding: screenWidth < 400 ? 18 : 24,
     borderRadius: 20,
     shadowColor: '#0f172a',
     shadowOpacity: 0.12,
@@ -352,7 +456,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   editButton: {
-    padding: 10,
+    padding: screenWidth < 400 ? 8 : 10,
     backgroundColor: '#f8fafc',
     borderRadius: 12,
     borderWidth: 1,
@@ -367,11 +471,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#0ea5e9',
     backgroundColor: '#f0f9ff',
-    padding: 14,
+    padding: screenWidth < 400 ? 12 : 14,
     marginTop: 10,
     borderRadius: 14,
     width: '100%',
-    fontSize: 16,
+    fontSize: screenWidth < 400 ? 14 : 16,
     fontWeight: '600',
     color: '#0f172a',
     shadowColor: '#0ea5e9',
@@ -387,8 +491,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: screenWidth < 400 ? 10 : 12,
+    paddingHorizontal: screenWidth < 400 ? 16 : 20,
     borderRadius: 14,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
@@ -402,11 +506,11 @@ const styles = StyleSheet.create({
   editBtnText: {
     color: '#374151',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: screenWidth < 400 ? 12 : 14,
     letterSpacing: 0.25,
   },
   kpiLabel: {
-    fontSize: 12,
+    fontSize: screenWidth < 400 ? 10 : 12,
     color: '#475569',
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -414,7 +518,7 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   kpiValue: {
-    fontSize: 30,
+    fontSize: screenWidth < 400 ? 24 : 30,
     fontWeight: '900',
     color: '#0f172a',
     marginTop: 12,
@@ -423,26 +527,29 @@ const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: '#ffffff',
     borderRadius: 24,
-    padding: 24,
+    padding: screenWidth < 400 ? 16 : 24,
     marginTop: 12,
     shadowColor: '#0f172a',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 10 },
     shadowRadius: 30,
     elevation: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: screenWidth < 400 ? 'column' : 'row',
+    alignItems: screenWidth < 400 ? 'flex-start' : 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   weightInfo: {
-    flex: 1,
-    paddingRight: 20,
+    flex: screenWidth < 400 ? 0 : 1,
+    paddingRight: screenWidth < 400 ? 0 : 20,
+    marginBottom: screenWidth < 400 ? 16 : 0,
+  },
+  chartContainer: {
+    alignItems: screenWidth < 400 ? 'center' : 'flex-end',
+    width: screenWidth < 400 ? '100%' : 'auto',
   },
   chartImage: {
-    width: 280,
-    height: 100,
     backgroundColor: '#ffffff',
     borderRadius: 16,
     shadowColor: '#64748b',
@@ -454,10 +561,11 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   iconButton: {
-    marginRight: 16,
-    padding: 14,
+    marginRight: screenWidth < 400 ? 8 : 12,
+    padding: screenWidth < 400 ? 10 : 14,
     backgroundColor: '#ffffff',
     borderRadius: 16,
     shadowColor: '#0f172a',
@@ -469,9 +577,9 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: screenWidth < 400 ? 40 : 52,
+    height: screenWidth < 400 ? 40 : 52,
+    borderRadius: screenWidth < 400 ? 20 : 26,
     borderWidth: 3,
     borderColor: '#0ea5e9',
     shadowColor: '#0ea5e9',
@@ -481,7 +589,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   pageTitle: {
-    fontSize: 18,
+    fontSize: screenWidth < 400 ? 16 : 18,
     fontWeight: '900',
     color: '#0f172a',
     marginBottom: 24,
@@ -494,12 +602,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 32,
-    gap: 16,
+    gap: screenWidth < 400 ? 12 : 16,
   },
   card: {
-    width: '48%',
+    width: screenWidth < 400 ? '47%' : '48%',
     backgroundColor: '#ffffff',
-    padding: 28,
+    padding: screenWidth < 400 ? 20 : 28,
     borderRadius: 24,
     alignItems: 'center',
     shadowColor: '#0f172a',
@@ -512,17 +620,18 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1 }],
   },
   cardLabel: {
-    marginTop: 16,
+    marginTop: screenWidth < 400 ? 12 : 16,
     color: '#0f172a',
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: screenWidth < 400 ? 13 : 15,
     letterSpacing: 0.25,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: screenWidth < 400 ? 18 : 22,
     fontWeight: '900',
     color: '#0f172a',
     marginBottom: 20,
@@ -535,7 +644,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   weightValue: {
-    fontSize: 36,
+    fontSize: screenWidth < 400 ? 28 : 36,
     fontWeight: '900',
     color: '#0f172a',
     letterSpacing: -1,
@@ -544,7 +653,7 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontWeight: '800',
     marginTop: 8,
-    fontSize: 17,
+    fontSize: screenWidth < 400 ? 14 : 17,
     letterSpacing: 0.25,
   },
   chartLabels: {
@@ -553,7 +662,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   chartLabel: {
-    fontSize: 11,
+    fontSize: screenWidth < 400 ? 10 : 11,
     color: '#475569',
     fontWeight: '600',
   },
@@ -564,7 +673,7 @@ const styles = StyleSheet.create({
   summaryItem: {
     width: '32%',
     backgroundColor: '#f8fafc',
-    padding: 12,
+    padding: screenWidth < 400 ? 10 : 12,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
@@ -572,14 +681,14 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     color: '#475569',
-    fontSize: 13,
+    fontSize: screenWidth < 400 ? 11 : 13,
     fontWeight: '600',
   },
   summaryValue: {
     fontWeight: '800',
     marginTop: 8,
     color: '#0f172a',
-    fontSize: 16,
+    fontSize: screenWidth < 400 ? 14 : 16,
   },
   deltaDown: {
     color: '#059669',
@@ -589,10 +698,105 @@ const styles = StyleSheet.create({
   },
   heightText: {
     color: '#475569',
-    fontSize: 15,
+    fontSize: screenWidth < 400 ? 13 : 15,
     marginTop: 8,
     fontWeight: '600',
     opacity: 0.8,
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: screenWidth < 400 ? 20 : 30,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  noDataText: {
+    color: '#64748b',
+    fontSize: screenWidth < 400 ? 12 : 14,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  noDataSubtext: {
+    color: '#94a3b8',
+    fontSize: screenWidth < 400 ? 10 : 12,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  chartWrapper: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 12,
+    position: 'relative',
+    shadowColor: '#64748b',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  lineContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  chartLine: {
+    height: 3,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 2,
+  },
+  chartPoint: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pointDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#0ea5e9',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pointLabel: {
+    position: 'absolute',
+    top: -30,
+    minWidth: 40,
+    alignItems: 'center',
+    backgroundColor: '#0ea5e9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  pointText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  dateLabels: {
+    position: 'absolute',
+    bottom: -25,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  dateLabel: {
+    fontSize: screenWidth < 400 ? 10 : 11,
+    color: '#475569',
+    fontWeight: '600',
   },
 });
 

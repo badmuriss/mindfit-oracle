@@ -1,9 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Modal,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +16,8 @@ import {
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 type Workout = {
   id?: string | number;
@@ -503,8 +509,25 @@ export default function ExploreScreen() {
         </View>
       )}
       <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.startBtn} onPress={() => startWorkout(item)} disabled={starting}>
-          {starting ? <ActivityIndicator color="#fff" /> : <Text style={styles.startBtnText}>Iniciar</Text>}
+        <TouchableOpacity 
+          style={[styles.startBtn, { 
+            width: '100%',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: screenWidth <= 400 ? 14 : 16,
+          }]} 
+          onPress={() => startWorkout(item)} 
+          disabled={starting}
+        >
+          {starting ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="play" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.startBtnText}>Iniciar Treino</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -519,9 +542,11 @@ export default function ExploreScreen() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.title}>Treinos</Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={styles.headerButtons}>
           <TouchableOpacity 
-            style={[styles.customBtn, { backgroundColor: showHistory ? '#475569' : '#64748b' }]} 
+            style={[styles.headerBtn, { 
+              backgroundColor: showHistory ? '#0ea5e9' : '#64748b',
+            }]} 
             onPress={() => {
               setShowHistory(!showHistory);
               if (!showHistory) {
@@ -530,11 +555,14 @@ export default function ExploreScreen() {
             }}
           >
             <MaterialCommunityIcons name="history" size={20} color="#fff" />
-            <Text style={styles.customBtnText}>Histórico</Text>
+            <Text style={styles.headerBtnText}>Histórico</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.customBtn} onPress={() => { setIsEditing(false); setModalVisible(true); }}>
+          <TouchableOpacity 
+            style={styles.headerBtn} 
+            onPress={() => { setIsEditing(false); setModalVisible(true); }}
+          >
             <MaterialCommunityIcons name="plus" size={20} color="#fff" />
-            <Text style={styles.customBtnText}>Personalizado</Text>
+            <Text style={styles.headerBtnText}>Novo Treino</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -611,18 +639,18 @@ export default function ExploreScreen() {
                   )}
                   <View style={styles.cardActions}>
                     <TouchableOpacity 
-                      style={[styles.startBtn, { backgroundColor: '#64748b', marginRight: 12 }]} 
+                      style={[styles.actionBtn, styles.editBtn]} 
                       onPress={() => openEdit(item)}
                     >
-                      <MaterialCommunityIcons name="pencil" size={16} color="#fff" style={{ marginRight: 6 }} />
-                      <Text style={styles.startBtnText}>Editar</Text>
+                      <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
+                      <Text style={styles.actionBtnText}>Editar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={[styles.startBtn, { backgroundColor: '#ef4444' }]} 
+                      style={[styles.actionBtn, styles.deleteBtn]} 
                       onPress={() => handleDeleteHistory(item)}
                     >
-                      <MaterialCommunityIcons name="delete" size={16} color="#fff" style={{ marginRight: 6 }} />
-                      <Text style={styles.startBtnText}>Excluir</Text>
+                      <MaterialCommunityIcons name="delete" size={16} color="#fff" />
+                      <Text style={styles.actionBtnText}>Excluir</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -672,46 +700,40 @@ export default function ExploreScreen() {
           </Text>
           <FlatList
             data={recommendedWorkouts}
-            horizontal
+            horizontal={screenWidth > 400}
+            numColumns={screenWidth <= 400 ? 1 : undefined}
             showsHorizontalScrollIndicator={false}
             keyExtractor={(w) => String(w.id)}
             renderItem={({ item }) => (
-              <View style={{ width: 240, marginRight: 16 }}>
+              <View style={{ 
+                width: screenWidth <= 400 ? '100%' : 240, 
+                marginRight: screenWidth > 400 ? 16 : 0,
+                marginBottom: screenWidth <= 400 ? 16 : 0,
+              }}>
                 <View style={[styles.card, { marginBottom: 0 }]}> 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.cardTitle, { marginLeft: 0, fontSize: 16 }]}>{item.name}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <TouchableOpacity 
-                        onPress={() => handleUseRecommended(item)} 
-                        style={{ 
-                          backgroundColor: '#f0f9ff',
-                          paddingVertical: 8,
-                          paddingHorizontal: 12,
-                          borderRadius: 12,
-                          borderWidth: 1,
-                          borderColor: '#0ea5e9',
-                        }}
-                      >
-                        <Text style={{ color: '#0ea5e9', fontWeight: '800', fontSize: 12 }}>Usar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        onPress={() => openEdit(item)}
-                        style={{
-                          padding: 8,
-                          backgroundColor: '#f8fafc',
-                          borderRadius: 10,
-                          borderWidth: 1,
-                          borderColor: '#e2e8f0',
-                        }}
-                      >
-                        <MaterialCommunityIcons name="pencil" size={16} color="#475569" />
-                      </TouchableOpacity>
-                    </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                    <Text style={[styles.cardTitle, { marginLeft: 0, fontSize: screenWidth <= 400 ? 14 : 16, flex: 1 }]}>{item.name}</Text>
                   </View>
-                  <Text style={[styles.cardSubtitle, { marginTop: 8 }]}>{item.description}</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+                  <Text style={[styles.cardSubtitle, { marginTop: 8, marginBottom: 12 }]}>{item.description}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 16 }}>
                     <MaterialCommunityIcons name="clock-outline" size={14} color="#64748b" />
-                    <Text style={{ color: '#64748b', marginLeft: 4, fontWeight: '600' }}>{item.durationMinutes} min</Text>
+                    <Text style={{ color: '#64748b', marginLeft: 4, fontWeight: '600', fontSize: screenWidth <= 400 ? 12 : 13 }}>{item.durationMinutes} min</Text>
+                  </View>
+                  <View style={{ flexDirection: screenWidth <= 400 ? 'column' : 'row', gap: 8 }}>
+                    <TouchableOpacity 
+                      onPress={() => handleUseRecommended(item)} 
+                      style={[styles.recommendedBtn, styles.useBtn]}
+                    >
+                      <MaterialCommunityIcons name="play" size={16} color="#fff" />
+                      <Text style={styles.recommendedBtnText}>Usar Treino</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => openEdit(item)}
+                      style={[styles.recommendedBtn, styles.customizeBtn]}
+                    >
+                      <MaterialCommunityIcons name="pencil" size={16} color="#0ea5e9" />
+                      <Text style={[styles.recommendedBtnText, { color: '#0ea5e9' }]}>Personalizar</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -770,31 +792,45 @@ export default function ExploreScreen() {
         </>
       )}      <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Treino personalizado</Text>
-            <TextInput 
-              placeholder="Nome do treino" 
-              value={customName} 
-              onChangeText={setCustomName} 
-              style={styles.input}
-              placeholderTextColor="#94a3b8"
-            />
-            <TextInput 
-              placeholder="Duração (min)" 
-              value={customDuration} 
-              onChangeText={setCustomDuration} 
-              keyboardType="numeric" 
-              style={styles.input}
-              placeholderTextColor="#94a3b8"
-            />
-            <TextInput 
-              placeholder="Notas ou descrição (opcional)" 
-              value={customNotes} 
-              onChangeText={setCustomNotes} 
-              style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
-              multiline
-              placeholderTextColor="#94a3b8"
-            />
+          <ScrollView 
+            style={styles.modalScrollView}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Treino personalizado</Text>
+              <TextInput 
+                placeholder="Nome do treino" 
+                value={customName} 
+                onChangeText={setCustomName} 
+                style={styles.input}
+                placeholderTextColor="#94a3b8"
+              />
+              <View style={{ 
+                flexDirection: screenWidth <= 400 ? 'column' : 'row', 
+                gap: screenWidth <= 400 ? 0 : 12,
+                marginBottom: screenWidth <= 400 ? 0 : 16,
+              }}>
+                <TextInput 
+                  placeholder="Duração (min)" 
+                  value={customDuration} 
+                  onChangeText={setCustomDuration} 
+                  keyboardType="numeric" 
+                  style={[styles.input, { flex: screenWidth <= 400 ? 1 : 0.5 }]}
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+              <TextInput 
+                placeholder="Notas ou descrição (opcional)" 
+                value={customNotes} 
+                onChangeText={setCustomNotes} 
+                style={[styles.input, { 
+                  height: screenWidth <= 400 ? 70 : 80, 
+                  textAlignVertical: 'top' 
+                }]} 
+                multiline
+                placeholderTextColor="#94a3b8"
+              />
 
             <View style={{ marginBottom: 12 }}>
               <Text style={{ 
@@ -840,7 +876,7 @@ export default function ExploreScreen() {
                 ))}
               </View>
 
-              <View style={{ flexDirection: 'row', marginBottom: 12, gap: 12 }}>
+              <View style={{ flexDirection: screenWidth <= 400 ? 'column' : 'row', marginBottom: 12, gap: 12 }}>
                 <TextInput 
                   placeholder="Nome do exercício" 
                   value={exName} 
@@ -853,11 +889,14 @@ export default function ExploreScreen() {
                   value={exSets} 
                   onChangeText={setExSets} 
                   keyboardType="numeric" 
-                  style={[styles.input, { width: 80, marginBottom: 0 }]}
+                  style={[styles.input, { 
+                    width: screenWidth <= 400 ? '100%' : 80, 
+                    marginBottom: 0 
+                  }]}
                   placeholderTextColor="#94a3b8"
                 />
               </View>
-              <View style={{ flexDirection: 'row', marginBottom: 16, gap: 12 }}>
+              <View style={{ flexDirection: screenWidth <= 400 ? 'column' : 'row', marginBottom: 16, gap: 12 }}>
                 <TextInput 
                   placeholder="Reps (ex: 12)" 
                   value={exReps} 
@@ -871,7 +910,10 @@ export default function ExploreScreen() {
                   value={exDuration} 
                   onChangeText={setExDuration} 
                   keyboardType="numeric" 
-                  style={[styles.input, { width: 120, marginBottom: 0 }]}
+                  style={[styles.input, { 
+                    width: screenWidth <= 400 ? '100%' : 120, 
+                    marginBottom: 0 
+                  }]}
                   placeholderTextColor="#94a3b8"
                 />
               </View>
@@ -935,15 +977,31 @@ export default function ExploreScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Cancelar</Text>
+              <TouchableOpacity 
+                style={[styles.modalCancelBtn]} 
+                onPress={() => setModalVisible(false)}
+              >
+                <MaterialCommunityIcons name="close" size={18} color="#475569" />
+                <Text style={styles.modalCancelBtnText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={createCustomWorkout} disabled={starting}>
-                {starting ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Criar e Iniciar</Text>}
+              <TouchableOpacity 
+                style={[styles.modalSaveBtn]} 
+                onPress={createCustomWorkout} 
+                disabled={starting}
+              >
+                {starting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <MaterialCommunityIcons name="rocket-launch" size={18} color="#fff" />
+                    <Text style={styles.modalSaveBtnText}>Criar e Iniciar</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
 
-          </View>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -1063,43 +1121,77 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f1f5f9', padding: 20 },
+  screen: { 
+    flex: 1, 
+    backgroundColor: '#f1f5f9', 
+    padding: screenWidth <= 400 ? 16 : 20,
+    paddingBottom: 100, // Para não ficar atrás da tab bar
+  },
   header: { 
-    flexDirection: 'row', 
+    flexDirection: screenWidth <= 400 ? 'column' : 'row', 
     justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 24,
+    alignItems: screenWidth <= 400 ? 'stretch' : 'center', 
+    marginBottom: screenWidth <= 400 ? 20 : 24,
     paddingBottom: 8,
   },
-  title: { 
-    fontSize: 26, 
-    fontWeight: '900', 
-    color: '#0f172a',
-    letterSpacing: -0.5,
+  headerButtons: {
+    flexDirection: screenWidth <= 400 ? 'column' : 'row',
+    gap: 12,
   },
-  customBtn: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#0ea5e9', 
-    paddingVertical: 12, 
-    paddingHorizontal: 18, 
+  headerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0ea5e9',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderRadius: 16,
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
     elevation: 4,
+    minHeight: 48,
+  },
+  headerBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    marginLeft: 8,
+    fontSize: 14,
+    letterSpacing: 0.25,
+  },
+  title: { 
+    fontSize: screenWidth <= 400 ? 22 : 26, 
+    fontWeight: '900', 
+    color: '#0f172a',
+    letterSpacing: -0.5,
+    marginBottom: screenWidth <= 400 ? 16 : 0,
+  },
+  customBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#0ea5e9', 
+    paddingVertical: screenWidth <= 400 ? 10 : 12, 
+    paddingHorizontal: screenWidth <= 400 ? 14 : 18, 
+    borderRadius: 16,
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
+    flex: screenWidth <= 400 ? 1 : 0,
+    justifyContent: 'center',
   },
   customBtnText: { 
     color: '#ffffff', 
     fontWeight: '800', 
     marginLeft: 8,
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 12 : 14,
     letterSpacing: 0.25,
   },
   card: { 
     backgroundColor: '#ffffff', 
-    padding: 20, 
+    padding: screenWidth <= 400 ? 16 : 20, 
     borderRadius: 20, 
     marginBottom: 16, 
     borderWidth: 1, 
@@ -1117,7 +1209,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { 
     marginLeft: 12, 
-    fontSize: 18, 
+    fontSize: screenWidth <= 400 ? 16 : 18, 
     fontWeight: '900', 
     color: '#0f172a',
     letterSpacing: -0.25,
@@ -1125,34 +1217,38 @@ const styles = StyleSheet.create({
   cardSubtitle: { 
     color: '#475569', 
     marginBottom: 16,
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 13 : 14,
     fontWeight: '500',
     lineHeight: 20,
   },
   cardActions: { 
     flexDirection: 'row', 
-    justifyContent: 'flex-end',
-    marginTop: 8,
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 12,
   },
   startBtn: { 
     backgroundColor: '#0ea5e9', 
-    paddingVertical: 12, 
-    paddingHorizontal: 20, 
+    paddingVertical: screenWidth <= 400 ? 10 : 12, 
+    paddingHorizontal: screenWidth <= 400 ? 16 : 20, 
     borderRadius: 14,
     shadowColor: '#0ea5e9',
     shadowOpacity: 0.3,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
     elevation: 3,
+    width: screenWidth <= 400 ? '100%' : 'auto',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   startBtnText: { 
     color: '#ffffff', 
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 12 : 14,
     letterSpacing: 0.25,
   },
   exerciseRow: { 
-    flexDirection: 'row', 
+    flexDirection: screenWidth <= 400 ? 'column' : 'row', 
     justifyContent: 'space-between', 
     paddingVertical: 8, 
     borderBottomWidth: 1, 
@@ -1161,28 +1257,37 @@ const styles = StyleSheet.create({
   },
   exerciseName: { 
     color: '#0f172a', 
-    flex: 1,
+    flex: screenWidth <= 400 ? 0 : 1,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 13 : 14,
+    marginBottom: screenWidth <= 400 ? 4 : 0,
   },
   exerciseMeta: { 
     color: '#64748b', 
-    marginLeft: 16,
+    marginLeft: screenWidth <= 400 ? 0 : 16,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: screenWidth <= 400 ? 12 : 13,
   },
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(15,23,42,0.75)', 
     justifyContent: 'center', 
     alignItems: 'center',
-    padding: 20,
+    padding: screenWidth <= 400 ? 16 : 20,
+  },
+  modalScrollView: {
+    width: '100%',
+    maxHeight: '95%',
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   modalCard: { 
-    width: '94%', 
+    width: '100%', 
     backgroundColor: '#ffffff', 
     borderRadius: 24, 
-    padding: 24, 
+    padding: screenWidth <= 400 ? 20 : 24, 
     borderWidth: 1, 
     borderColor: '#e2e8f0',
     shadowColor: '#0f172a',
@@ -1190,10 +1295,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 20 },
     shadowRadius: 40,
     elevation: 20,
-    maxHeight: '90%',
   },
   modalTitle: { 
-    fontSize: 22, 
+    fontSize: screenWidth <= 400 ? 18 : 22, 
     fontWeight: '900', 
     marginBottom: 20, 
     color: '#0f172a',
@@ -1204,10 +1308,10 @@ const styles = StyleSheet.create({
     borderWidth: 2, 
     borderColor: '#cbd5e1', 
     borderRadius: 14, 
-    padding: 16, 
+    padding: screenWidth <= 400 ? 14 : 16, 
     marginBottom: 16, 
     backgroundColor: '#ffffff',
-    fontSize: 16,
+    fontSize: screenWidth <= 400 ? 14 : 16,
     fontWeight: '600',
     color: '#0f172a',
     shadowColor: '#64748b',
@@ -1217,14 +1321,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   modalActions: { 
-    flexDirection: 'row', 
+    flexDirection: screenWidth <= 400 ? 'column' : 'row', 
     justifyContent: 'flex-end',
-    marginTop: 20,
+    marginTop: 24,
     gap: 12,
   },
   cancelBtn: { 
-    paddingVertical: 12, 
-    paddingHorizontal: 18, 
+    paddingVertical: screenWidth <= 400 ? 14 : 12, 
+    paddingHorizontal: screenWidth <= 400 ? 16 : 18, 
     borderRadius: 14, 
     backgroundColor: '#f8fafc', 
     borderWidth: 1,
@@ -1234,16 +1338,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
+    alignItems: 'center',
   },
   cancelBtnText: { 
     color: '#374151', 
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 13 : 14,
     letterSpacing: 0.25,
   },
   saveBtn: { 
-    paddingVertical: 12, 
-    paddingHorizontal: 18, 
+    paddingVertical: screenWidth <= 400 ? 14 : 12, 
+    paddingHorizontal: screenWidth <= 400 ? 16 : 18, 
     borderRadius: 14, 
     backgroundColor: '#0ea5e9',
     shadowColor: '#0ea5e9',
@@ -1251,20 +1356,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
     elevation: 4,
+    alignItems: 'center',
   },
   saveBtnText: { 
     color: '#ffffff', 
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 13 : 14,
     letterSpacing: 0.25,
   },
   // Enhanced confirmation dialog styles
   confirmCard: {
     width: '92%',
-    maxWidth: 400,
+    maxWidth: screenWidth <= 400 ? 350 : 400,
     backgroundColor: '#ffffff',
     borderRadius: 24,
-    padding: 28,
+    padding: screenWidth <= 400 ? 24 : 28,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -1275,9 +1381,9 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   confirmIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: screenWidth <= 400 ? 70 : 80,
+    height: screenWidth <= 400 ? 70 : 80,
+    borderRadius: screenWidth <= 400 ? 35 : 40,
     backgroundColor: '#fef2f2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1286,7 +1392,7 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca',
   },
   confirmTitle: {
-    fontSize: 22,
+    fontSize: screenWidth <= 400 ? 18 : 22,
     fontWeight: '900',
     color: '#0f172a',
     marginBottom: 20,
@@ -1297,13 +1403,13 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#f8fafc',
     borderRadius: 16,
-    padding: 16,
+    padding: screenWidth <= 400 ? 14 : 16,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   workoutPreviewTitle: {
-    fontSize: 18,
+    fontSize: screenWidth <= 400 ? 16 : 18,
     fontWeight: '800',
     color: '#0f172a',
     marginBottom: 12,
@@ -1311,30 +1417,31 @@ const styles = StyleSheet.create({
     letterSpacing: -0.25,
   },
   workoutPreviewDetails: {
-    flexDirection: 'row',
+    flexDirection: screenWidth <= 400 ? 'column' : 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: screenWidth <= 400 ? 8 : 16,
     marginBottom: 8,
   },
   workoutDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
+    paddingHorizontal: screenWidth <= 400 ? 10 : 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    alignSelf: screenWidth <= 400 ? 'flex-start' : 'center',
   },
   workoutDetailText: {
-    fontSize: 13,
+    fontSize: screenWidth <= 400 ? 12 : 13,
     fontWeight: '600',
     color: '#64748b',
     marginLeft: 6,
   },
   workoutPreviewDescription: {
-    fontSize: 14,
+    fontSize: screenWidth <= 400 ? 13 : 14,
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 20,
@@ -1342,7 +1449,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   confirmMessage: {
-    fontSize: 15,
+    fontSize: screenWidth <= 400 ? 14 : 15,
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 22,
@@ -1351,13 +1458,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   confirmActions: {
-    flexDirection: 'row',
+    flexDirection: screenWidth <= 400 ? 'column' : 'row',
     gap: 12,
     width: '100%',
   },
   confirmCancelBtn: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: screenWidth <= 400 ? 14 : 16,
     paddingHorizontal: 20,
     borderRadius: 16,
     backgroundColor: '#f8fafc',
@@ -1373,13 +1480,13 @@ const styles = StyleSheet.create({
   confirmCancelText: {
     color: '#475569',
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: screenWidth <= 400 ? 14 : 15,
     letterSpacing: 0.25,
   },
   confirmDeleteBtn: {
     flex: 1,
     flexDirection: 'row',
-    paddingVertical: 16,
+    paddingVertical: screenWidth <= 400 ? 14 : 16,
     paddingHorizontal: 20,
     borderRadius: 16,
     backgroundColor: '#ef4444',
@@ -1394,7 +1501,117 @@ const styles = StyleSheet.create({
   confirmDeleteText: {
     color: '#ffffff',
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: screenWidth <= 400 ? 14 : 15,
     letterSpacing: 0.25,
+  },
+  // Novos estilos para botões melhorados
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 3,
+    minHeight: 44,
+  },
+  editBtn: {
+    backgroundColor: '#64748b',
+    shadowColor: '#64748b',
+  },
+  deleteBtn: {
+    backgroundColor: '#ef4444',
+    shadowColor: '#ef4444',
+  },
+  actionBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 13,
+    letterSpacing: 0.25,
+    marginLeft: 6,
+  },
+  recommendedBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 44,
+  },
+  useBtn: {
+    backgroundColor: '#0ea5e9',
+    shadowColor: '#0ea5e9',
+  },
+  customizeBtn: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#0ea5e9',
+    shadowColor: '#0ea5e9',
+  },
+  recommendedBtnText: {
+    fontWeight: '800',
+    fontSize: 13,
+    letterSpacing: 0.25,
+    marginLeft: 6,
+    color: '#ffffff',
+  },
+  // Estilos dos botões do modal
+  modalCancelBtn: {
+    flex: screenWidth <= 400 ? 1 : 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    shadowColor: '#64748b',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 52,
+  },
+  modalCancelBtnText: {
+    color: '#475569',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.25,
+    marginLeft: 6,
+  },
+  modalSaveBtn: {
+    flex: screenWidth <= 400 ? 1 : 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#0ea5e9',
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 6,
+    minHeight: 52,
+  },
+  modalSaveBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.25,
+    marginLeft: 6,
   },
 });

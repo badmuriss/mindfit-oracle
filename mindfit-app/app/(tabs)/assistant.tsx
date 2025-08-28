@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import React, { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function AssistantScreen() {
   const { token, userId } = useUser();
@@ -122,9 +125,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 24,
-    paddingTop: 20,
-    paddingBottom: 20,
+    padding: screenWidth <= 400 ? 16 : 24,
+    paddingTop: screenWidth <= 400 ? 16 : 20,
+    paddingBottom: screenWidth <= 400 ? 16 : 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',

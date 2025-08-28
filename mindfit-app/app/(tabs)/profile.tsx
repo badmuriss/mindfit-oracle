@@ -1,8 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { userName, userEmail, userId, token, setUserName, logout } = useUser();
@@ -51,8 +54,13 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    showMessage({ message: 'Logout realizado.', type: 'success' });
+    try {
+      await logout();
+      // Não precisa chamar router.replace aqui pois o layout já cuida disso
+    } catch (error) {
+      console.log('Erro durante logout:', error);
+      showMessage({ message: 'Erro ao fazer logout.', type: 'danger' });
+    }
   };
 
   return (
@@ -151,13 +159,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f1f5f9',
-    padding: 24,
+    padding: screenWidth <= 400 ? 16 : 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
-    paddingTop: 12,
+    marginBottom: screenWidth <= 400 ? 24 : 32,
+    paddingTop: screenWidth <= 400 ? 8 : 12,
     paddingHorizontal: 4,
   },
   title: {
