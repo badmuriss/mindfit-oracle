@@ -17,6 +17,7 @@ import {
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
+import { nowUTC, formatUTCToLocalDateTime } from '../../utils/dateUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -304,7 +305,7 @@ export default function ExploreScreen() {
     try {
       const payload: any = {
         name: w.name,
-        timestamp: new Date().toISOString(),
+        timestamp: nowUTC(),
       };
       if (w.durationMinutes) payload.durationInMinutes = w.durationMinutes;
       if (w.description) payload.description = w.description;
@@ -351,7 +352,7 @@ export default function ExploreScreen() {
     try {
       const payload: any = {
         name: customName.trim(),
-        timestamp: new Date().toISOString(),
+        timestamp: nowUTC(),
         durationInMinutes: parseInt(customDuration, 10) || 20,
       };
       if (customNotes) payload.description = customNotes;
@@ -456,7 +457,7 @@ export default function ExploreScreen() {
       try {
         const payload: any = {
           name: w.name,
-          timestamp: new Date().toISOString(),
+          timestamp: nowUTC(),
           durationInMinutes: w.durationMinutes,
           description: w.description,
         };
@@ -681,7 +682,7 @@ export default function ExploreScreen() {
                   <Text style={styles.cardSubtitle}>{item.description}</Text>
                   {item.timestamp && (
                     <Text style={{ color: '#64748b', fontSize: 12, marginBottom: 8, fontWeight: '600' }}>
-                      {new Date(item.timestamp).toLocaleString()}
+                      {formatUTCToLocalDateTime(item.timestamp)}
                     </Text>
                   )}
                   <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12, gap: 16 }}>

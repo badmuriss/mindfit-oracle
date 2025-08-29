@@ -5,6 +5,7 @@ import { ActivityIndicator, Dimensions, FlatList, Platform, ScrollView, StyleShe
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
+import { createLocalTimeAsUTC, nowUTC, formatUTCToLocalTime, formatUTCToLocalDateTime } from '../../utils/dateUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -141,7 +142,7 @@ export default function NutritionScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
-  const [timestamp, setTimestamp] = useState(new Date().toISOString());
+  const [timestamp, setTimestamp] = useState(nowUTC());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [calories, setCalories] = useState('');
   const [carbo, setCarbo] = useState('');
@@ -206,11 +207,9 @@ export default function NutritionScreen() {
     setCarbo(''); 
     setProtein(''); 
     setFat('');
-    // Set timestamp to selected date with current time
+    // Set timestamp to selected date with current time in UTC
     const now = new Date();
-    const selectedDateTime = new Date(selectedDate);
-    selectedDateTime.setHours(now.getHours(), now.getMinutes(), 0, 0);
-    setTimestamp(selectedDateTime.toISOString());
+    setTimestamp(createLocalTimeAsUTC(selectedDate, now.getHours(), now.getMinutes()));
     setModalVisible(true);
   };
 
@@ -218,7 +217,7 @@ export default function NutritionScreen() {
     setName(p.name);
     // don't overwrite the timestamp when creating a new meal - keep the moment the user opened the modal
     if (isEditing) {
-      setTimestamp(p.timestamp || new Date().toISOString());
+      setTimestamp(p.timestamp || nowUTC());
     }
     setCalories(String(p.calories ?? ''));
     setCarbo(p.carbo != null ? String(p.carbo) : '');
@@ -230,7 +229,7 @@ export default function NutritionScreen() {
     setIsEditing(true);
   setEditingId((m.apiId || m.id) ?? null);
     setName(m.name);
-    setTimestamp(m.timestamp || new Date().toISOString());
+    setTimestamp(m.timestamp || nowUTC());
     setCalories(String(m.calories ?? ''));
     setCarbo(m.carbo != null ? String(m.carbo) : '');
     setProtein(m.protein != null ? String(m.protein) : '');
@@ -353,7 +352,7 @@ export default function NutritionScreen() {
     <View style={styles.mealRow}>
       <View style={{ flex: 1 }}>
         <Text style={styles.mealName}>{item.name}</Text>
-        <Text style={styles.mealMeta}>{new Date(item.timestamp).toLocaleString()} • {item.calories} kcal</Text>
+        <Text style={styles.mealMeta}>{formatUTCToLocalDateTime(item.timestamp)} • {item.calories} kcal</Text>
         <Text style={styles.mealMacro}>{item.carbo ? `C: ${item.carbo}g ` : ''}{item.protein ? `P: ${item.protein}g ` : ''}{item.fat ? `F: ${item.fat}g` : ''}</Text>
       </View>
       <View style={styles.mealActions}>
@@ -519,7 +518,7 @@ export default function NutritionScreen() {
                 >
                   <MaterialCommunityIcons name="clock" size={20} color="#22c55e" style={{ marginRight: 8 }} />
                   <Text style={styles.timeDisplayText}>
-                    {new Date(timestamp).toTimeString().slice(0, 5)}
+                    {formatUTCToLocalTime(timestamp)}
                   </Text>
                   <MaterialCommunityIcons 
                     name={showTimePicker ? "chevron-up" : "chevron-down"} 
@@ -539,17 +538,15 @@ export default function NutritionScreen() {
                           key={i}
                           style={[
                             styles.hourButton,
-                            new Date(timestamp).getHours() === i && styles.hourButtonActive
+                            new Date(timestamp).getUTCHours() === i && styles.hourButtonActive
                           ]}
                           onPress={() => {
-                            const newDate = new Date(selectedDate);
-                            newDate.setHours(i, new Date(timestamp).getMinutes(), 0, 0);
-                            setTimestamp(newDate.toISOString());
+                            setTimestamp(createLocalTimeAsUTC(selectedDate, i, new Date(timestamp).getUTCMinutes()));
                           }}
                         >
                           <Text style={[
                             styles.hourButtonText,
-                            new Date(timestamp).getHours() === i && styles.hourButtonTextActive
+                            new Date(timestamp).getUTCHours() === i && styles.hourButtonTextActive
                           ]}>
                             {String(i).padStart(2, '0')}
                           </Text>
@@ -566,17 +563,15 @@ export default function NutritionScreen() {
                           key={minute}
                           style={[
                             styles.minuteButton,
-                            Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonActive
+                            Math.floor(new Date(timestamp).getUTCMinutes() / 5) * 5 === minute && styles.minuteButtonActive
                           ]}
                           onPress={() => {
-                            const newDate = new Date(selectedDate);
-                            newDate.setHours(new Date(timestamp).getHours(), minute, 0, 0);
-                            setTimestamp(newDate.toISOString());
+                            setTimestamp(createLocalTimeAsUTC(selectedDate, new Date(timestamp).getUTCHours(), minute));
                           }}
                         >
                           <Text style={[
                             styles.minuteButtonText,
-                            Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonTextActive
+                            Math.floor(new Date(timestamp).getUTCMinutes() / 5) * 5 === minute && styles.minuteButtonTextActive
                           ]}>
                             {String(minute).padStart(2, '0')}
                           </Text>
