@@ -150,7 +150,7 @@ export default function LoginScreen() {
         </View>
       )}
       <LinearGradient
-        colors={["#14532d", "#22c55e", "#bbf7d0"]} // verde escuro para verde claro
+        colors={["#14532d", "#22c55e", "#22c55e", "#14532d"]} // verde escuro para verde claro
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBg}
@@ -172,7 +172,9 @@ export default function LoginScreen() {
             style={styles.input}
             underlineColor="transparent"
             mode="flat"
-            theme={{ colors: { text: '#fff', placeholder: '#aaa', background: 'transparent' } }}
+            textColor="#0f172a"
+            contentStyle={{ color: '#0f172a' }}
+            placeholderTextColor="#475569"
             onSubmitEditing={handleLogin}
           />
           <TextInput
@@ -183,7 +185,9 @@ export default function LoginScreen() {
             style={styles.input}
             underlineColor="transparent"
             mode="flat"
-            theme={{ colors: { text: '#fff', placeholder: '#aaa', background: 'transparent' } }}
+            textColor="#0f172a"
+            contentStyle={{ color: '#0f172a' }}
+            placeholderTextColor="#475569"
             onSubmitEditing={handleLogin}
           />
           <Button
@@ -191,7 +195,7 @@ export default function LoginScreen() {
             onPress={handleLogin}
             style={styles.loginButton}
             labelStyle={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}
-            buttonColor="#22c55e"
+            buttonColor="#11c55e"
           >
             Entrar
           </Button>
@@ -257,17 +261,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   input: {
-  backgroundColor: '#fff',
-  borderRadius: 24,
-  marginBottom: 16,
-  color: '#111',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    marginBottom: 16,
   },
   loginButton: {
     borderRadius: 12,
     marginTop: 8,
     marginBottom: 8,
     elevation: 2,
-    shadowColor: '#14532d',
+    shadowColor: '#11532d',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -285,7 +288,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   bottomText: {
-    color: '#14532d',
+    color: '#00032d',
     fontSize: 15,
   },
   signinLink: {

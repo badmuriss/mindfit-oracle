@@ -5,6 +5,8 @@ import com.mindfit.api.dto.ChatResponse;
 import com.mindfit.api.model.User;
 import com.mindfit.api.repository.UserRepository;
 import com.mindfit.api.service.LogService;
+import com.mindfit.api.service.MealRegisterService;
+import com.mindfit.api.service.MeasurementsRegisterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -13,10 +15,13 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,8 @@ public class ChatbotService {
     private final OpenAiChatModel openAiChatModel;
     private final UserRepository userRepository;
     private final LogService logService;
+    private final MealRegisterService mealRegisterService;
+    private final MeasurementsRegisterService measurementsRegisterService;
     private final Map<String, Deque<String>> conversations = new ConcurrentHashMap<>();
     private static final int MAX_TURNS = 10; // keep last 10 user-assistant exchanges
 
@@ -114,6 +121,10 @@ public class ChatbotService {
     }
 
     public String generateUserProfile(String userId) {
+        return generateUserProfile(userId, "Generate initial profile based on user registration data.");
+    }
+    
+    public String generateUserProfile(String userId, String observations) {
         try {
             User user = userRepository.findById(userId).orElse(null);
             if (user == null) {
@@ -125,17 +136,98 @@ public class ChatbotService {
                 return null;
             }
             
-            // Build profile generation prompt
-            String profilePrompt = "Based on this user registration data, generate a concise nutrition profile (max 100 words): " +
-                    "Name: " + user.getName() + 
-                    ", Email: " + user.getEmail() +
-                    ", Registration date: " + user.getCreatedAt() +
-                    ". Generate only basic demographic assumptions for nutrition guidance. " +
-                    "Keep it brief and professional.";
+            // Build comprehensive profile generation prompt
+            StringBuilder profileBuilder = new StringBuilder();
+            
+            // Start with existing profile context if available
+            String existingProfile = user.getProfile();
+            if (existingProfile != null && !existingProfile.trim().isEmpty()) {
+                profileBuilder.append("CURRENT USER PROFILE:\n");
+                profileBuilder.append(existingProfile);
+                profileBuilder.append("\n\nUpdate this profile based on the new information below:\n\n");
+            } else {
+                profileBuilder.append("Generate a comprehensive nutrition and fitness profile based on the following user data:\n\n");
+            }
+            
+            // Add user basic information
+            profileBuilder.append("USER INFORMATION:\n");
+            profileBuilder.append("Name: ").append(user.getName());
+            profileBuilder.append(", Email: ").append(user.getEmail());
+            
+            // Include sex for better nutrition guidance
+            if (user.getSex() != null) {
+                String sexDisplay = switch (user.getSex()) {
+                    case MALE -> "Male";
+                    case FEMALE -> "Female";
+                    case NOT_INFORMED -> "Gender not specified";
+                };
+                profileBuilder.append(", Gender: ").append(sexDisplay);
+            }
+            
+            // Include age calculation from birth date
+            if (user.getBirthDate() != null) {
+                int age = Period.between(user.getBirthDate(), LocalDate.now()).getYears();
+                profileBuilder.append(", Age: ").append(age).append(" years");
+            }
+            
+            profileBuilder.append("\n\n");
+            
+            // Add recent measurements data
+            try {
+                var measurements = measurementsRegisterService.findByUserId(userId, PageRequest.of(0, 10));
+                if (measurements.hasContent()) {
+                    profileBuilder.append("RECENT MEASUREMENTS:\n");
+                    measurements.getContent().forEach(measurement -> {
+                        profileBuilder.append("- Weight: ").append(measurement.weightInKG()).append(" kg");
+                        if (measurement.heightInCM() != null) {
+                            profileBuilder.append(", Height: ").append(measurement.heightInCM()).append(" cm");
+                        }
+                        profileBuilder.append(" (").append(measurement.timestamp()).append(")\n");
+                    });
+                    profileBuilder.append("\n");
+                }
+            } catch (Exception e) {
+                // Continue without measurements data
+            }
+            
+            // Add recent meals data
+            try {
+                var meals = mealRegisterService.findByUserId(userId, PageRequest.of(0, 10));
+                if (meals.hasContent()) {
+                    profileBuilder.append("RECENT MEALS:\n");
+                    meals.getContent().forEach(meal -> {
+                        profileBuilder.append("- ").append(meal.name())
+                                .append(" (").append(meal.calories()).append(" kcal");
+                        if (meal.carbo() != null) profileBuilder.append(", ").append(meal.carbo()).append("g carbs");
+                        if (meal.protein() != null) profileBuilder.append(", ").append(meal.protein()).append("g protein");
+                        if (meal.fat() != null) profileBuilder.append(", ").append(meal.fat()).append("g fat");
+                        profileBuilder.append(")\n");
+                    });
+                    profileBuilder.append("\n");
+                }
+            } catch (Exception e) {
+                // Continue without meals data
+            }
+            
+            // Add the new observations
+            profileBuilder.append("NEW OBSERVATIONS:\n");
+            profileBuilder.append(observations);
+            profileBuilder.append("\n\n");
+            
+            // Instructions for profile generation
+            profileBuilder.append("INSTRUCTIONS:\n");
+            profileBuilder.append("Generate a personalized nutrition and fitness profile (max 200 words) that includes:\n");
+            profileBuilder.append("- Dietary recommendations based on user's preferences and restrictions\n");
+            profileBuilder.append("- Fitness goals and exercise suggestions\n");
+            profileBuilder.append("- Any health considerations mentioned\n");
+            profileBuilder.append("- Personalized tips based on measurements and meal history\n");
+            profileBuilder.append("Keep it professional, actionable, and personalized.");
+            
+            String profilePrompt = profileBuilder.toString();
             
             OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .temperature(0.1)
-                    .maxTokens(150)
+                    .temperature(0.2)
+                    .maxTokens(300)
                     .build();
             
             Prompt prompt = new Prompt(
@@ -152,7 +244,7 @@ public class ChatbotService {
             
             return generatedProfile;
         } catch (Exception e) {
-            logService.logError("CHATBOT_SERVICE", "Failed to generate user profile", e.getMessage());
+            logService.logError("CHATBOT_SERVICE", "Failed to generate user profile with observations", e.getMessage());
             return null;
         }
     }

@@ -3,10 +3,13 @@ package com.mindfit.api.service;
 import com.mindfit.api.dto.JwtResponse;
 import com.mindfit.api.dto.LoginRequest;
 import com.mindfit.api.dto.UserSignupRequest;
+import com.mindfit.api.dto.MeasurementsRegisterCreateRequest;
 import com.mindfit.api.common.exception.UnauthorizedException;
 import com.mindfit.api.mapper.UserMapper;
+import com.mindfit.api.model.MeasurementsRegister;
 import com.mindfit.api.model.User;
 import com.mindfit.api.enums.Role;
+import com.mindfit.api.repository.MeasurementsRegisterRepository;
 import com.mindfit.api.util.JwtUtil;
 import com.mindfit.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final LogService logService;
+    private final MeasurementsRegisterRepository measurementsRegisterRepository;
+    private final ChatbotService chatbotService;
 
     public JwtResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -69,6 +74,21 @@ public class AuthService {
         user.setRoles(Set.of(Role.USER));
         
         user = userRepository.save(user);
+
+        updateLastLogonDate(user);
+
+        // Create initial weight and height measurements
+        createInitialMeasurements(user.getId(), request);
+        
+        // Generate initial profile with observations if provided
+        if (request.observations() != null && !request.observations().trim().isEmpty()) {
+            try {
+                chatbotService.generateUserProfile(user.getId(), request.observations().trim());
+            } catch (Exception e) {
+                // Log error but don't fail registration
+                logService.logError("AUTH_SERVICE", "Failed to generate initial profile", e.getMessage());
+            }
+        }
         
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoles());
         return JwtResponse.of(token, user.getId(), user.getEmail(), user.getRoles());
@@ -113,5 +133,24 @@ public class AuthService {
         int lastLogOnYear = lastLogOn.getYear();
         
         return currentYear != lastLogOnYear || currentWeek != lastLogOnWeek;
+    }
+    
+    private void createInitialMeasurements(String userId, UserSignupRequest request) {
+        try {
+            // Create initial measurement record with both weight and height
+            if (request.initialWeightInKG() != null || request.initialHeightInCM() != null) {
+                MeasurementsRegister measurements = new MeasurementsRegister();
+
+                measurements.setUserId(userId);
+                measurements.setWeightInKG(request.initialWeightInKG());
+                measurements.setHeightInCM(request.initialHeightInCM());
+                measurements.setTimestamp(LocalDateTime.now());
+
+                measurementsRegisterRepository.save(measurements);
+            }
+        } catch (Exception e) {
+            // Log error but don't fail registration
+            logService.logError("AUTH_SERVICE", "Failed to create initial measurements", e.getMessage());
+        }
     }
 }

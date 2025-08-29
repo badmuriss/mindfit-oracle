@@ -5,7 +5,8 @@ import { ActivityIndicator, Dimensions, FlatList, Platform, ScrollView, StyleShe
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
-import { createLocalTimeAsUTC, nowUTC, formatUTCToLocalTime, formatUTCToLocalDateTime } from '../../utils/dateUtils';
+import { createLocalTimeAsUTC, nowUTC, formatUTCToLocalTime, formatUTCToLocalDateTime, updateUTCTime, localTimeAsUTC } from '../../utils/dateUtils';
+import { searchProcessedFoods, ProcessedFoodItem, debounce } from '../../utils/usdaApi';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -23,111 +24,6 @@ type Meal = {
   apiId?: string;
 };
 
-type PresetMeal = Meal & {
-  icon: string;
-  description: string;
-  category: 'breakfast' | 'lunch' | 'dinner' | 'snack';
-  color: string;
-};
-
-const PRESET_MEALS: PresetMeal[] = [
-  { 
-    name: 'Frango com arroz', 
-    timestamp: new Date().toISOString(), 
-    calories: 550, 
-    carbo: 60, 
-    protein: 40, 
-    fat: 12,
-    icon: 'food-drumstick',
-    description: 'Prato balanceado rico em proteína',
-    category: 'lunch',
-    color: '#f97316'
-  },
-  { 
-    name: 'Ovo mexido (2 ovos)', 
-    timestamp: new Date().toISOString(), 
-    calories: 200, 
-    carbo: 1.5, 
-    protein: 14, 
-    fat: 15,
-    icon: 'egg',
-    description: 'Fonte excelente de proteína',
-    category: 'breakfast',
-    color: '#eab308'
-  },
-  { 
-    name: 'Salada com atum', 
-    timestamp: new Date().toISOString(), 
-    calories: 320, 
-    carbo: 8, 
-    protein: 30, 
-    fat: 18,
-    icon: 'salad',
-    description: 'Leve e nutritiva',
-    category: 'lunch',
-    color: '#22c55e'
-  },
-  { 
-    name: 'Iogurte com granola', 
-    timestamp: new Date().toISOString(), 
-    calories: 300, 
-    carbo: 45, 
-    protein: 12, 
-    fat: 6,
-    icon: 'cup',
-    description: 'Perfeito para o café da manhã',
-    category: 'breakfast',
-    color: '#8b5cf6'
-  },
-  { 
-    name: 'Banana', 
-    timestamp: new Date().toISOString(), 
-    calories: 105, 
-    carbo: 27, 
-    protein: 1.3, 
-    fat: 0.3,
-    icon: 'food-banana',
-    description: 'Energia natural e potássio',
-    category: 'snack',
-    color: '#facc15'
-  },
-  { 
-    name: 'Sanduíche integral', 
-    timestamp: new Date().toISOString(), 
-    calories: 280, 
-    carbo: 35, 
-    protein: 15, 
-    fat: 8,
-    icon: 'food-croissant',
-    description: 'Prático e nutritivo',
-    category: 'breakfast',
-    color: '#a16207'
-  },
-  { 
-    name: 'Salmão grelhado', 
-    timestamp: new Date().toISOString(), 
-    calories: 380, 
-    carbo: 2, 
-    protein: 35, 
-    fat: 25,
-    icon: 'fish',
-    description: 'Rico em ômega-3',
-    category: 'dinner',
-    color: '#ec4899'
-  },
-  { 
-    name: 'Smoothie de frutas', 
-    timestamp: new Date().toISOString(), 
-    calories: 180, 
-    carbo: 42, 
-    protein: 4, 
-    fat: 1,
-    icon: 'cup-water',
-    description: 'Refrescante e vitamínico',
-    category: 'snack',
-    color: '#06b6d4'
-  },
-];
 
 export default function NutritionScreen() {
   const { token, userId } = useUser();
@@ -150,6 +46,12 @@ export default function NutritionScreen() {
   const [fat, setFat] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Food search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ProcessedFoodItem[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
   // Confirmation dialog state
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [mealToDelete, setMealToDelete] = useState<Meal | null>(null);
@@ -169,7 +71,6 @@ export default function NutritionScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resp.ok) {
-        console.log('Failed to fetch meals', resp.status);
         setMeals([]);
         return;
       }
@@ -207,33 +108,81 @@ export default function NutritionScreen() {
     setCarbo(''); 
     setProtein(''); 
     setFat('');
-    // Set timestamp to selected date with current time in UTC
+    // Set timestamp to selected date with current time
     const now = new Date();
-    setTimestamp(createLocalTimeAsUTC(selectedDate, now.getHours(), now.getMinutes()));
+    const newTimestamp = new Date(selectedDate);
+    newTimestamp.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    setTimestamp(newTimestamp.toISOString());
+    
+    // Reset search state
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchError(null);
+    
     setModalVisible(true);
   };
 
-  const applyPreset = (p: PresetMeal) => {
-    setName(p.name);
-    // don't overwrite the timestamp when creating a new meal - keep the moment the user opened the modal
-    if (isEditing) {
-      setTimestamp(p.timestamp || nowUTC());
+  const searchFoods = async (query: string) => {
+    if (!query.trim() || query.trim().length < 3) {
+      setSearchResults([]);
+      setSearchError(null);
+      return;
     }
-    setCalories(String(p.calories ?? ''));
-    setCarbo(p.carbo != null ? String(p.carbo) : '');
-    setProtein(p.protein != null ? String(p.protein) : '');
-    setFat(p.fat != null ? String(p.fat) : '');
+
+    setIsSearching(true);
+    setSearchError(null);
+    
+    try {
+      const results = await searchProcessedFoods(query.trim(), 20);
+      setSearchResults(results);
+      
+      if (results.length === 0) {
+        setSearchError('Nenhum alimento encontrado. Tente outro termo.');
+      }
+    } catch (error) {
+      console.error('Error searching foods:', error);
+      
+      setSearchError('Erro ao buscar alimentos. ');
+      
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Create debounced search function
+  const debouncedSearch = debounce(searchFoods, 800);
+
+  const applyFoodItem = (food: ProcessedFoodItem) => {
+    setName(food.name + (food.brand ? ` (${food.brand})` : ''));
+    setCalories(String(food.calories));
+    setCarbo(String(food.carbs));
+    setProtein(String(food.protein));
+    setFat(String(food.fat));
+    
+    // Clear search
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchError(null);
   };
 
   const openEdit = (m: Meal) => {
+    console.log(nowUTC())
     setIsEditing(true);
-  setEditingId((m.apiId || m.id) ?? null);
+    setEditingId((m.apiId || m.id) ?? null);
     setName(m.name);
+    // Keep the original timestamp without any timezone conversion
     setTimestamp(m.timestamp || nowUTC());
     setCalories(String(m.calories ?? ''));
     setCarbo(m.carbo != null ? String(m.carbo) : '');
     setProtein(m.protein != null ? String(m.protein) : '');
     setFat(m.fat != null ? String(m.fat) : '');
+    
+    // Reset search state when editing
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchError(null);
+    
     setModalVisible(true);
   };
 
@@ -307,7 +256,9 @@ export default function NutritionScreen() {
     if (!name.trim()) { showMessage({ message: 'Informe o nome da refeição.', type: 'danger' }); return; }
     if (!token || !userId) { showMessage({ message: 'Usuário não autenticado.', type: 'danger' }); return; }
 
-    const payload: any = { name: name.trim(), timestamp: timestamp, calories: parseInt(calories, 10) || 0 };
+    // Convert local time to UTC time before sending to API
+    const utcTimestamp = localTimeAsUTC(timestamp);
+    const payload: any = { name: name.trim(), timestamp: utcTimestamp, calories: parseInt(calories, 10) || 0 };
     if (carbo) payload.carbo = parseFloat(carbo);
     if (protein) payload.protein = parseFloat(protein);
     if (fat) payload.fat = parseFloat(fat);
@@ -352,7 +303,7 @@ export default function NutritionScreen() {
     <View style={styles.mealRow}>
       <View style={{ flex: 1 }}>
         <Text style={styles.mealName}>{item.name}</Text>
-        <Text style={styles.mealMeta}>{formatUTCToLocalDateTime(item.timestamp)} • {item.calories} kcal</Text>
+        <Text style={styles.mealMeta}>{new Date(item.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })} • {new Date(item.timestamp).toLocaleDateString('pt-BR')} • {item.calories} kcal</Text>
         <Text style={styles.mealMacro}>{item.carbo ? `C: ${item.carbo}g ` : ''}{item.protein ? `P: ${item.protein}g ` : ''}{item.fat ? `F: ${item.fat}g` : ''}</Text>
       </View>
       <View style={styles.mealActions}>
@@ -458,39 +409,93 @@ export default function NutritionScreen() {
             <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
               <Text style={styles.modalTitle}>{isEditing ? 'Editar Refeição' : 'Nova Refeição'}</Text>
               
-              <Text style={styles.label}>Sugestões Rápidas</Text>
-              <Text style={styles.sublabel}>Toque em uma opção para preenchimento automático</Text>
-              
-              <View style={styles.presetGrid}>
-                {PRESET_MEALS.map((p) => (
-                  <TouchableOpacity key={p.name} style={[styles.presetCard, { borderColor: p.color + '30' }]} onPress={() => applyPreset(p)}>
-                    <View style={[styles.presetIcon, { backgroundColor: p.color + '15' }]}>
-                      <MaterialCommunityIcons name={p.icon as any} size={22} color={p.color} />
+              {!isEditing && (
+                <>
+                  <Text style={styles.label}>Buscar Alimentos</Text>
+                  <Text style={styles.sublabel}>Digite pelo menos 3 caracteres em inglês para buscar na base USDA</Text>
+                  
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={(text) => {
+                      setSearchQuery(text);
+                      if (text.length >= 3) {
+                        debouncedSearch(text);
+                      } else {
+                        setSearchResults([]);
+                        setSearchError(null);
+                      }
+                    }}
+                    style={styles.searchInput}
+                    placeholder="Ex: grilled chicken, brown rice, banana..."
+                    placeholderTextColor="#94a3b8"
+                  />
+
+                  {/* Search loading */}
+                  {isSearching && (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color="#22c55e" />
+                      <Text style={styles.loadingText}>Buscando alimentos...</Text>
                     </View>
-                    <Text style={styles.presetCardTitle}>{p.name}</Text>
-                    <Text style={styles.presetCardDescription}>{p.description}</Text>
-                    <View style={styles.presetCardFooter}>
-                      <Text style={[styles.presetCardCalories, { color: p.color }]}>
-                        {p.calories} kcal
+                  )}
+
+                  {/* Search error */}
+                  {searchError && !isSearching && (
+                    <View style={styles.errorContainer}>
+                      <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
+                      <Text style={styles.errorText}>{searchError}</Text>
+                    </View>
+                  )}
+
+                  {/* Search results */}
+                  {!isSearching && !searchError && searchResults.length > 0 && (
+                    <>
+                      <Text style={styles.label}>Resultados ({searchResults.length})</Text>
+                      <View style={styles.foodGrid}>
+                        {searchResults.map((food, index) => (
+                          <TouchableOpacity
+                            key={`${food.fdcId}-${index}`}
+                            style={styles.foodCard}
+                            onPress={() => applyFoodItem(food)}
+                          >
+                            <Text style={styles.foodCardTitle} numberOfLines={2}>
+                              {food.name}
+                            </Text>
+                            {food.brand && (
+                              <Text style={styles.foodCardBrand} numberOfLines={1}>
+                                {food.brand}
+                              </Text>
+                            )}
+                            <Text style={styles.foodCardCalories}>
+                              {food.calories} kcal
+                            </Text>
+                            <View style={styles.macroRow}>
+                              <Text style={styles.macroText}>C: {food.carbs}g</Text>
+                              <Text style={styles.macroText}>P: {food.protein}g</Text>
+                              <Text style={styles.macroText}>G: {food.fat}g</Text>
+                            </View>
+                            {food.servingSize && (
+                              <Text style={styles.foodCardServing}>
+                                Por {food.servingSize}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </>
+                  )}
+
+                  {/* Empty state when no search query */}
+                  {!searchQuery && !isSearching && (
+                    <View style={styles.emptySearchContainer}>
+                      <MaterialCommunityIcons name="magnify" size={48} color="#cbd5e1" />
+                      <Text style={styles.emptySearchText}>Digite para buscar alimentos</Text>
+                      <Text style={styles.emptySearchSubtext}>
+                        Use termos em inglês para acessar milhares de alimentos da base USDA com informações nutricionais precisas
                       </Text>
-                      <View style={[styles.categoryBadge, { backgroundColor: p.color + '20' }]}>
-                        <Text style={[styles.categoryBadgeText, { color: p.color }]}>
-                          {p.category === 'breakfast' ? 'Café' : 
-                           p.category === 'lunch' ? 'Almoço' : 
-                           p.category === 'dinner' ? 'Jantar' : 'Lanche'}
-                        </Text>
-                      </View>
                     </View>
-                    {p.carbo && p.protein && p.fat && (
-                      <View style={styles.macroRow}>
-                        <Text style={styles.macroText}>C: {p.carbo}g</Text>
-                        <Text style={styles.macroText}>P: {p.protein}g</Text>
-                        <Text style={styles.macroText}>G: {p.fat}g</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
+                  )}
+                </>
+              )}
 
               <Text style={styles.label}>Nome</Text>
               <TextInput 
@@ -518,7 +523,7 @@ export default function NutritionScreen() {
                 >
                   <MaterialCommunityIcons name="clock" size={20} color="#22c55e" style={{ marginRight: 8 }} />
                   <Text style={styles.timeDisplayText}>
-                    {formatUTCToLocalTime(timestamp)}
+                    {new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                   </Text>
                   <MaterialCommunityIcons 
                     name={showTimePicker ? "chevron-up" : "chevron-down"} 
@@ -538,15 +543,17 @@ export default function NutritionScreen() {
                           key={i}
                           style={[
                             styles.hourButton,
-                            new Date(timestamp).getUTCHours() === i && styles.hourButtonActive
+                            new Date(timestamp).getHours() === i && styles.hourButtonActive
                           ]}
                           onPress={() => {
-                            setTimestamp(createLocalTimeAsUTC(selectedDate, i, new Date(timestamp).getUTCMinutes()));
+                            const currentDate = new Date(timestamp);
+                            currentDate.setHours(i);
+                            setTimestamp(currentDate.toISOString());
                           }}
                         >
                           <Text style={[
                             styles.hourButtonText,
-                            new Date(timestamp).getUTCHours() === i && styles.hourButtonTextActive
+                            new Date(timestamp).getHours() === i && styles.hourButtonTextActive
                           ]}>
                             {String(i).padStart(2, '0')}
                           </Text>
@@ -563,15 +570,17 @@ export default function NutritionScreen() {
                           key={minute}
                           style={[
                             styles.minuteButton,
-                            Math.floor(new Date(timestamp).getUTCMinutes() / 5) * 5 === minute && styles.minuteButtonActive
+                            Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonActive
                           ]}
                           onPress={() => {
-                            setTimestamp(createLocalTimeAsUTC(selectedDate, new Date(timestamp).getUTCHours(), minute));
+                            const currentDate = new Date(timestamp);
+                            currentDate.setMinutes(minute);
+                            setTimestamp(currentDate.toISOString());
                           }}
                         >
                           <Text style={[
                             styles.minuteButtonText,
-                            Math.floor(new Date(timestamp).getUTCMinutes() / 5) * 5 === minute && styles.minuteButtonTextActive
+                            Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonTextActive
                           ]}>
                             {String(minute).padStart(2, '0')}
                           </Text>
@@ -1204,5 +1213,140 @@ const styles = StyleSheet.create({
   },
   minuteButtonTextActive: {
     color: '#ffffff',
+  },
+  // Food search styles
+  searchInput: {
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 0,
+    marginBottom: 16,
+    backgroundColor: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+    shadowColor: '#22c55e',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dc2626',
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  emptySearchContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptySearchText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#64748b',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySearchSubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  foodGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  foodCard: {
+    width: '48%',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
+    minHeight: 120,
+  },
+  foodCardTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
+    letterSpacing: -0.25,
+    lineHeight: 16,
+  },
+  foodCardBrand: {
+    fontSize: 10,
+    color: '#64748b',
+    marginBottom: 6,
+    fontWeight: '600',
+    lineHeight: 14,
+  },
+  foodCardCalories: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#22c55e',
+    marginBottom: 6,
+    letterSpacing: 0.25,
+  },
+  foodCardServing: {
+    fontSize: 9,
+    color: '#94a3b8',
+    marginTop: 4,
+    fontWeight: '500',
+    letterSpacing: 0.25,
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#64748b',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 4,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

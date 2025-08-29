@@ -9,12 +9,14 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build-time API base URL for the frontend
+# Build-time environment variables for the frontend
 ARG API_BASE_URL=http://localhost:8088
+ARG USDA_API_KEY=DEMO_KEY
 ENV API_BASE_URL=${API_BASE_URL}
+ENV USDA_API_KEY=${USDA_API_KEY}
 
-# Create app config with environment variable
-RUN node -e "const fs = require('fs'); const config = JSON.parse(fs.readFileSync('app.json', 'utf8')); config.expo.extra.apiBaseUrl = process.env.API_BASE_URL; fs.writeFileSync('app.json', JSON.stringify(config, null, 2));"
+# Create app config with environment variables
+RUN node -e "const fs = require('fs'); const config = JSON.parse(fs.readFileSync('app.json', 'utf8')); config.expo.extra.apiBaseUrl = process.env.API_BASE_URL; config.expo.extra.usdaApiKey = process.env.USDA_API_KEY; fs.writeFileSync('app.json', JSON.stringify(config, null, 2));"
 
 # Build for web
 RUN npm run build:web
@@ -29,10 +31,13 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     index home.html index.html; \
     \
-    # Try the exact file, an .html variant, then fall back to home.html \
+    # Try the exact file, an .html variant, then always fall back to home.html \
     location / { \
-        try_files $uri $uri.html /home.html; \
+        try_files $uri $uri.html $uri/ /home.html; \
     } \
+    \
+    # Handle any unknown routes by redirecting to home \
+    error_page 404 /home.html; \
     \
     # Enable gzip compression \
     gzip on; \

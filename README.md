@@ -6,10 +6,10 @@ A comprehensive full-stack fitness management platform with AI-powered features,
 
 ### Core Functionality
 - **User Management**: Complete user registration, authentication, and profile management
-- **Meal Tracking**: Log and track daily meals with detailed nutritional information
-- **Exercise Tracking**: Record workouts, exercises, and fitness activities
-- **Body Measurements**: Track weight, body composition, and other health metrics
-- **Activity Logging**: Comprehensive logging system for all user activities
+- **USDA Food Database**: Search and track meals using real food data from USDA with intelligent caching and rate limiting
+- **Exercise Tracking**: Record workouts, exercises, and custom fitness activities with calorie estimation
+- **Weight Tracking**: Visual weight tracking with custom SVG charts
+- **AI Assistant**: OpenAI-powered chatbot for fitness and nutrition guidance
 
 ### AI-Powered Features
 - **Smart Chatbot**: OpenAI-powered assistant for fitness and nutrition guidance
@@ -17,8 +17,8 @@ A comprehensive full-stack fitness management platform with AI-powered features,
 - **Intelligent Recommendations**: AI-driven meal and exercise suggestions
 
 ### Admin Panel
-- **User Management**: View, create, edit, and delete user accounts
-- **Data Analytics**: Comprehensive dashboard with charts and statistics
+- **User Management**: View, create, edit, and delete user accounts with age and sex fields
+- **Data Analytics**: Comprehensive dashboard with user statistics
 - **System Logs**: Monitor application activities and user actions
 - **Content Management**: Manage system-wide content and settings
 
@@ -34,11 +34,12 @@ A comprehensive full-stack fitness management platform with AI-powered features,
 
 ### Frontend
 - **Admin Panel (Angular 20)**: Manage users, data, and system settings
-- **App (Expo/React Native Web)**: End-user experience for logging meals, exercises, measurements, and chatting with the AI assistant
+- **App (Expo/React Native Web)**: End-user experience with USDA food database integration, custom weight charts, and AI assistant
 - **Framework**: Angular 20 with standalone components
-- **UI Library**: Angular Material + TailwindCSS
+- **UI Library**: Angular Material + TailwindCSS for admin panel, React Native Paper for mobile app
 - **State Management**: Reactive forms and services
-- **Charts**: Chart.js integration for data visualization
+- **Charts**: Custom SVG-based weight tracking charts
+- **Food Data**: USDA Food Data Central API integration with intelligent caching
 - **Authentication**: JWT-based auth with route guards
 
 ### Infrastructure
@@ -80,6 +81,9 @@ APP_CORS_ALLOWED_ORIGINS=http://localhost:8082,http://localhost:8083,http://loca
 
 # Frontend/API Configuration
 API_BASE_URL=http://localhost:8088
+
+# USDA Food Data Central API Key (get free key from https://fdc.nal.usda.gov/)
+USDA_API_KEY=DEMO_KEY
 ```
 
 ### 3. Start the Application

@@ -14,6 +14,7 @@ import { ToastService } from '../../shared/services/toast.service';
 import { MealFormDialogComponent, MealDialogData, MealFormData } from '../../shared/components/meal-form-dialog/meal-form-dialog.component';
 import { ExerciseFormDialogComponent, ExerciseDialogData, ExerciseFormData } from '../../shared/components/exercise-form-dialog/exercise-form-dialog.component';
 import { MeasurementFormDialogComponent, MeasurementDialogData, MeasurementFormData } from '../../shared/components/measurement-form-dialog/measurement-form-dialog.component';
+import { ProfileGenerationDialogComponent, ProfileGenerationDialogData, ProfileGenerationFormData } from '../../shared/components/profile-generation-dialog/profile-generation-dialog.component';
 import { PageEvent } from '@angular/material/paginator';
 
 export interface User {
@@ -24,6 +25,8 @@ export interface User {
   createdAt: string;
   lastLogonDate: string;
   profile: string;
+  sex?: string;
+  birthDate?: string;
 }
 
 export interface Meal {
@@ -79,6 +82,10 @@ export interface Measurement {
                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-6">
                   <span><strong>Roles:</strong> {{ user?.roles?.join(', ') || 'N/A' }}</span>
                   <span><strong>Last Login:</strong> {{ (user?.lastLogonDate | date:'medium') || 'Never' }}</span>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-6">
+                  <span><strong>Sex:</strong> {{ formatSexDisplay(user?.sex) }}</span>
+                  <span><strong>Age:</strong> {{ calculateAge(user?.birthDate) }}</span>
                 </div>
                 <div>
                   <span><strong>Created:</strong> {{ user?.createdAt | date:'medium' }}</span>
@@ -644,20 +651,81 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     this.router.navigate(['/users']);
   }
 
+  formatSexDisplay(sex?: string): string {
+    if (!sex) return 'Not specified';
+    switch (sex) {
+      case 'MALE': return 'Male';
+      case 'FEMALE': return 'Female';
+      case 'NOT_INFORMED': return 'Prefer not to say';
+      default: return 'Not specified';
+    }
+  }
+
+  calculateAge(birthDate?: string): string {
+    if (!birthDate) return 'Not specified';
+    
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return `${age} years`;
+  }
+
   generateProfile(): void {
+    const dialogData: ProfileGenerationDialogData = {
+      userName: this.user?.name || 'Unknown User',
+      currentProfile: this.user?.profile
+    };
+
+    const dialogRef = this.dialog.open(ProfileGenerationDialogComponent, {
+      width: '600px',
+      data: dialogData,
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe((result: ProfileGenerationFormData) => {
+      if (result && result.observations) {
+        this.performProfileGeneration(result.observations);
+      }
+    });
+  }
+
+  private performProfileGeneration(observations: string): void {
     this.generatingProfile = true;
-    this.apiService.post(`/users/${this.userId}/generate-profile`, {})
+    
+    const payload = { observations };
+    
+    this.apiService.post(`/users/${this.userId}/generate-profile`, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
+          this.generatingProfile = false;
           this.toast.success('AI profile generated successfully');
-          // Refresh the page to show updated profile
-          window.location.reload();
+          
+          // Update the local user profile
+          if (this.user && response.profile) {
+            this.user.profile = response.profile;
+          } else {
+            // Fallback: reload user data
+            this.loadUser();
+          }
         },
         error: (error) => {
           this.generatingProfile = false;
           console.error('Failed to generate profile:', error);
-          this.toast.error('Failed to generate AI profile');
+          
+          if (error.status === 429) {
+            this.toast.error('Rate limit exceeded. Please try again later.');
+          } else if (error.error?.message) {
+            this.toast.error(`Failed to generate AI profile: ${error.error.message}`);
+          } else {
+            this.toast.error('Failed to generate AI profile. Please try again.');
+          }
         }
       });
   }

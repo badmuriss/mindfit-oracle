@@ -1,8 +1,10 @@
 package com.mindfit.api.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import com.mindfit.api.enums.Sex;
+import com.mindfit.api.validation.ValidAge;
+import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
 
 public record UserSignupRequest(
         @NotBlank(message = "Email is required")
@@ -15,5 +17,24 @@ public record UserSignupRequest(
         
         @NotBlank(message = "Name is required")
         @Size(max = 100, message = "Name must be at most 100 characters")
-        String name
+        String name,
+        
+        @NotNull(message = "Sex is required")
+        Sex sex,
+        
+        @NotNull(message = "Birth date is required")
+        @ValidAge(message = "Age must be between 13 and 120 years")
+        LocalDate birthDate,
+
+        // Initial physical data captured during signup
+        @NotNull(message = "Initial weight is required")
+        @Positive(message = "Weight must be positive")
+        Double initialWeightInKG,
+
+        @NotNull(message = "Initial height is required")
+        @Positive(message = "Height must be positive")
+        Integer initialHeightInCM,
+
+        // Free-form observations such as conditions, preferences, restrictions, etc.
+        String observations
 ) {}

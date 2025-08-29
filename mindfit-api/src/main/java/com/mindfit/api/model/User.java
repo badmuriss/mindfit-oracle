@@ -10,6 +10,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.mindfit.api.enums.Role;
+import com.mindfit.api.enums.Sex;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Set;
@@ -32,6 +34,10 @@ public class User implements UserDetails {
     private String name;
     
     private String profile;
+    
+    private Sex sex;
+    
+    private LocalDate birthDate;
     
     private LocalDateTime lastLogonDate;
     

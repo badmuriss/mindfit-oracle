@@ -21,7 +21,6 @@ const HomeScreen = () => {
       // Forçar navegação para login após logout
       router.replace('/login');
     } catch (error) {
-      console.log('Erro durante logout:', error);
       showMessage({ message: 'Erro ao fazer logout.', type: 'danger' });
     }
   };
@@ -227,7 +226,6 @@ const HomeScreen = () => {
       });
       if (!resp.ok) {
         const text = await resp.text();
-        console.log('Failed to save measurement', resp.status, text);
         showMessage({ message: 'Erro ao salvar medição.', type: 'danger' });
         return;
       }
@@ -235,7 +233,6 @@ const HomeScreen = () => {
       // refresh latest
       await loadLatest();
     } catch (err) {
-      console.log('Error saving measurement:', err);
       showMessage({ message: 'Erro ao salvar medição.', type: 'danger' });
     } finally {
       setSaveLoading(false);
@@ -267,20 +264,20 @@ const HomeScreen = () => {
 
   <View style={styles.grid}>
         <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/exercise')}>
-          <MaterialCommunityIcons name="dumbbell" size={32} color="#22c55e" />
+          <MaterialCommunityIcons name="dumbbell" size={screenWidth < 440 ? 28 : 32} color="#22c55e" />
           <Text style={styles.cardLabel}>Treinos</Text>
         </TouchableOpacity>
   <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/nutrition')}>
-          <MaterialCommunityIcons name="food-apple" size={32} color="#10b981" />
+          <MaterialCommunityIcons name="food-apple" size={screenWidth < 440 ? 28 : 32} color="#10b981" />
           <Text style={styles.cardLabel}>Nutrição</Text>
         </TouchableOpacity>
   <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/assistant')}>
-          <MaterialCommunityIcons name="robot-excited" size={32} color="#8b5cf6" />
+          <MaterialCommunityIcons name="robot-excited" size={screenWidth < 440 ? 28 : 32} color="#8b5cf6" />
           <Text style={styles.cardLabel}>Assistente</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.card} onPress={() => router.push('/(tabs)/profile')}>
-          <MaterialCommunityIcons name="account-cog" size={32} color="#f59e0b" />
-          <Text style={styles.cardLabel}>Configurações</Text>
+          <MaterialCommunityIcons name="account-cog" size={screenWidth < 440 ? 28 : 32} color="#f59e0b" />
+          <Text style={styles.cardLabel}>Config</Text>
         </TouchableOpacity>
       </View>
 
@@ -388,6 +385,7 @@ const HomeScreen = () => {
             )}
           </View>
         </View>
+        </View>
         <View style={styles.chartCard}>
           <View style={styles.weightInfo}>
             {measurementLoading ? (
@@ -415,7 +413,6 @@ const HomeScreen = () => {
       </View>
 
       {/* Resumo Diário removido conforme solicitado */}
-      </View>
     </ScrollView>
   );
 };
@@ -504,11 +501,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#22c55e',
     backgroundColor: '#f0f9ff',
-    padding: screenWidth < 400 ? 12 : 14,
+    padding: screenWidth < 440 ? 12 : 14,
     marginTop: 10,
     borderRadius: 14,
     width: '100%',
-    fontSize: screenWidth < 400 ? 14 : 16,
+    fontSize: screenWidth < 440 ? 14 : 16,
     fontWeight: '600',
     color: '#0f172a',
     shadowColor: '#22c55e',
@@ -524,8 +521,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   editBtn: {
-    paddingVertical: screenWidth < 400 ? 10 : 12,
-    paddingHorizontal: screenWidth < 400 ? 16 : 20,
+    paddingVertical: screenWidth < 440 ? 10 : 12,
+    paddingHorizontal: screenWidth < 440 ? 16 : 20,
     borderRadius: 14,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
@@ -539,11 +536,11 @@ const styles = StyleSheet.create({
   editBtnText: {
     color: '#374151',
     fontWeight: '700',
-    fontSize: screenWidth < 400 ? 12 : 14,
+    fontSize: screenWidth < 440 ? 12 : 14,
     letterSpacing: 0.25,
   },
   kpiLabel: {
-    fontSize: screenWidth < 400 ? 10 : 12,
+    fontSize: screenWidth < 440 ? 10 : 12,
     color: '#475569',
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -561,6 +558,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: screenWidth < 400 ? 16 : 24,
+    paddingBottom: 40,
     marginTop: 12,
     shadowColor: '#0f172a',
     shadowOpacity: 0.15,
@@ -635,13 +633,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 32,
-    gap: screenWidth < 400 ? 12 : 16,
+    gap: screenWidth < 440 ? 10 : 16,
   },
   card: {
-    width: screenWidth < 400 ? '47%' : '48%',
+    width: screenWidth < 440 ? '47%' : '48%',
     backgroundColor: '#ffffff',
-    padding: screenWidth < 400 ? 20 : 28,
-    borderRadius: 24,
+    padding: screenWidth < 440 ? 16 : 28,
+    borderRadius: screenWidth < 440 ? 18 : 24,
     alignItems: 'center',
     shadowColor: '#0f172a',
     shadowOpacity: 0.12,
@@ -653,10 +651,10 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1 }],
   },
   cardLabel: {
-    marginTop: screenWidth < 400 ? 12 : 16,
+    marginTop: screenWidth < 440 ? 10 : 16,
     color: '#0f172a',
     fontWeight: '800',
-    fontSize: screenWidth < 400 ? 13 : 15,
+    fontSize: screenWidth < 440 ? 12 : 15,
     letterSpacing: 0.25,
     textAlign: 'center',
   },
@@ -721,7 +719,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 8,
     color: '#0f172a',
-    fontSize: screenWidth < 400 ? 14 : 16,
+    fontSize: screenWidth < 440 ? 14 : 16,
   },
   deltaDown: {
     color: '#059669',
@@ -747,14 +745,14 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     color: '#64748b',
-    fontSize: screenWidth < 400 ? 12 : 14,
+    fontSize: screenWidth < 440 ? 12 : 14,
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
   },
   noDataSubtext: {
     color: '#94a3b8',
-    fontSize: screenWidth < 400 ? 10 : 12,
+    fontSize: screenWidth < 440 ? 10 : 12,
     fontWeight: '500',
     marginTop: 4,
     textAlign: 'center',

@@ -66,3 +66,45 @@ export function formatUTCToLocalTime(utcISOString: string): string {
 export function formatUTCToLocalDateTime(utcISOString: string): string {
   return new Date(utcISOString).toLocaleString();
 }
+
+/**
+ * Formats a UTC ISO string to 24-hour time format without timezone conversion
+ * @param utcISOString 
+ * @returns formatted time string in HH:MM format
+ */
+export function formatUTCTo24HourTime(utcISOString: string): string {
+  const date = new Date(utcISOString);
+  const hours = date.getUTCHours().toString().padStart(2, '0');
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+/**
+ * Updates the time portion of a UTC ISO string while preserving the date
+ * @param originalUTCString Original UTC ISO string
+ * @param newHour New hour (0-23)
+ * @param newMinute New minute (0-59)
+ * @returns New UTC ISO string with updated time
+ */
+export function updateUTCTime(originalUTCString: string, newHour: number, newMinute: number): string {
+  const date = new Date(originalUTCString);
+  date.setUTCHours(newHour, newMinute, 0, 0);
+  return date.toISOString();
+}
+
+/**
+ * Converts local time to UTC time (treating local time as if it were UTC)
+ * @param localTimeString Local time ISO string
+ * @returns UTC ISO string with local time treated as UTC
+ */
+export function localTimeAsUTC(localTimeString: string): string {
+  const localDate = new Date(localTimeString);
+  return createUTCISOString(
+    localDate.getFullYear(),
+    localDate.getMonth(),
+    localDate.getDate(),
+    localDate.getHours(),
+    localDate.getMinutes(),
+    localDate.getSeconds()
+  );
+}

@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import FlashMessage, { showMessage } from 'react-native-flash-message';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Provider as PaperProvider } from 'react-native-paper';
 
 import { UserProvider, useUser } from '../components/UserContext';
 
@@ -26,18 +27,25 @@ function AuthProtectedLayout() {
       return; // Aguarda o fim do carregamento
     }
 
-    console.log('Auth check - isLoggedIn:', isLoggedIn, 'pathname:', pathname);
-
     const isProtectedRoute = pathname.startsWith('/(tabs)');
+    const is404Route = pathname.includes('404') || pathname.includes('[...404]');
+
+    // Handle unknown/404 routes - redirect to appropriate home
+    if (is404Route) {
+      if (isLoggedIn) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.replace('/login');
+      }
+      return;
+    }
 
     // Se logado, redireciona de /login ou /signup para a home
     if (isLoggedIn && (pathname === '/login' || pathname === '/signup')) {
-      console.log('Redirecting logged user to home');
       router.replace('/(tabs)/home');
     }
     // Se não logado, redireciona de rotas protegidas para /login
     else if (!isLoggedIn && isProtectedRoute) {
-      console.log('Redirecting unauthenticated user to login');
       showMessage({
         message: 'Faça login para acessar esta página.',
         type: 'danger',
@@ -46,7 +54,6 @@ function AuthProtectedLayout() {
     }
     // Se não logado e na raiz, vai para login
     else if (!isLoggedIn && pathname === '/') {
-      console.log('Redirecting from root to login');
       router.replace('/login');
     }
   }, [isLoggedIn, loading, pathname, router]);
@@ -54,7 +61,6 @@ function AuthProtectedLayout() {
   // Effect adicional para monitorar mudanças no estado de login
   useEffect(() => {
     if (!loading && !isLoggedIn) {
-      console.log('User logged out, forcing redirect to login');
       router.replace('/login');
     }
   }, [isLoggedIn, loading, router]);
@@ -80,7 +86,6 @@ function AuthProtectedLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="signup" />
         <Stack.Screen name="onboarding" />
-        <Stack.Screen name="[...404]" options={{ title: "Página não encontrada" }} />
       </Stack>
     </>
   );
@@ -89,10 +94,12 @@ function AuthProtectedLayout() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <UserProvider>
-        <AuthProtectedLayout />
-        <FlashMessage position="top" />
-      </UserProvider>
+      <PaperProvider>
+        <UserProvider>
+          <AuthProtectedLayout />
+          <FlashMessage position="top" />
+        </UserProvider>
+      </PaperProvider>
     </SafeAreaProvider>
   );
 }

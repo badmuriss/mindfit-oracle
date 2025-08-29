@@ -61,6 +61,7 @@ services:
       dockerfile: Dockerfile
       args:
         API_BASE_URL: ${API_BASE_URL:-http://localhost:8088}
+        USDA_API_KEY: ${USDA_API_KEY:-DEMO_KEY}
     container_name: mindfit-app
     restart: unless-stopped
     depends_on:

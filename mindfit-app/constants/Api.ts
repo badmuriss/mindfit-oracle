@@ -1,21 +1,41 @@
 import Constants from 'expo-constants';
 
-// Resolve API base URL from Expo config (set in app.json during Docker build)
-const resolvedFromExpo = (Constants?.expoConfig as any)?.extra?.apiBaseUrl
-  || (Constants as any)?.manifest?.extra?.apiBaseUrl;
+// Helper: choose first non-empty string
+function pickString(...vals: any[]): string | undefined {
+  for (const v of vals) {
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (s) return s;
+    }
+  }
+  return undefined;
+}
 
-// Fallback to env (if present) or default to 8088
-const API_BASE_URL: string = (resolvedFromExpo as string)
-  || (process.env.API_BASE_URL as string)
-  || 'http://localhost:8088';
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, '');
+}
+
+// Resolve API base URL from Expo config/env.
+// Guard against objects to prevent "[object Object]" ending up in URLs.
+const expoExtra = (Constants as any)?.expoConfig?.extra || (Constants as any)?.manifest?.extra || {};
+const resolvedFromExpo = pickString(expoExtra.apiBaseUrl, expoExtra.API_BASE_URL);
+const resolvedFromEnv = pickString(process.env.EXPO_PUBLIC_API_BASE_URL, process.env.API_BASE_URL);
+
+const API_BASE_URL: string = stripTrailingSlash(
+  pickString(resolvedFromExpo, resolvedFromEnv) || 'http://localhost:8088'
+);
+
+// USDA API configuration
+const resolvedUsdaFromExpo = pickString(expoExtra.usdaApiKey, expoExtra.USDA_API_KEY);
+const resolvedUsdaFromEnv = pickString(process.env.EXPO_PUBLIC_USDA_API_KEY, process.env.USDA_API_KEY);
+const USDA_API_KEY: string = pickString(resolvedUsdaFromExpo, resolvedUsdaFromEnv) || 'DEMO_KEY';
 
 const baseUrl = API_BASE_URL;
 
+// These logs help in dev, but avoid dumping giant objects
 console.log('API_BASE_URL resolved:', API_BASE_URL);
 
-export { API_BASE_URL };
-
-console.log('baseUrl being used in endpoints:', baseUrl, 'type:', typeof baseUrl);
+export { API_BASE_URL, USDA_API_KEY };
 
 export const API_ENDPOINTS = {
   AUTH: {
@@ -56,6 +76,11 @@ export const API_ENDPOINTS = {
     CHATBOT: (userId: string) => {
       const url = `${baseUrl}/users/${userId}/chatbot`;
       console.log('CHATBOT URL:', url);
+      return url;
+    },
+    GENERATE_PROFILE: (userId: string) => {
+      const url = `${baseUrl}/users/${userId}/generate-profile`;
+      console.log('GENERATE_PROFILE URL:', url);
       return url;
     },
   },

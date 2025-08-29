@@ -108,7 +108,8 @@ export default function ExploreScreen() {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [customName, setCustomName] = useState('');
-  const [customDuration, setCustomDuration] = useState('20');
+  const [customDuration, setCustomDuration] = useState('');
+  const [customCalories, setCustomCalories] = useState('');
   const [customNotes, setCustomNotes] = useState('');
   const [customExercises, setCustomExercises] = useState<any[]>([]);
   const [exName, setExName] = useState('');
@@ -166,7 +167,6 @@ export default function ExploreScreen() {
       const parsed: Workout[] = items.map((it: any) => normalizeWorkout(it));
       setHistoryWorkouts(parsed);
     } catch (err) {
-      console.log('Failed to load workout history', err);
       setHistoryWorkouts([]);
     } finally {
       setLoadingHistory(false);
@@ -225,10 +225,8 @@ export default function ExploreScreen() {
       }
 
       const txt = await resp.text();
-      console.log('Failed to delete workout', resp.status, txt, { url });
       showMessage({ message: 'Erro ao remover treino.', type: 'danger' });
     } catch (err) {
-      console.log('Error deleting workout', err);
       showMessage({ message: 'Erro ao remover treino.', type: 'danger' });
     } finally {
       setDeleting(false);
@@ -288,7 +286,6 @@ export default function ExploreScreen() {
           setWorkouts([]);
         }
       } catch (err) {
-        console.log('Failed to load workouts', err);
       } finally {
         setLoading(false);
       }
@@ -324,7 +321,6 @@ export default function ExploreScreen() {
       });
       if (!resp.ok) {
         const text = await resp.text();
-        console.log('startWorkout failed', resp.status, text);
         showMessage({ message: 'Não foi possível iniciar o treino.', type: 'danger' });
         return;
       }
@@ -332,7 +328,6 @@ export default function ExploreScreen() {
       const calories = respJson?.caloriesBurnt ?? w.caloriesBurnt ?? estimateCalories(w.durationMinutes ?? 20, w.difficulty, weightKg);
       showMessage({ message: `Treino '${w.name}' iniciado! (${Math.round(calories)} kcal)`, type: 'success' });
     } catch (err) {
-      console.log('Error starting workout', err);
       showMessage({ message: 'Erro ao iniciar treino.', type: 'danger' });
     } finally {
       setStarting(false);
@@ -342,6 +337,10 @@ export default function ExploreScreen() {
   const createCustomWorkout = async () => {
     if (!customName.trim()) {
       showMessage({ message: 'Informe um nome para o treino.', type: 'danger' });
+      return;
+    }
+    if (customCalories && (Number.isNaN(parseInt(customCalories, 10)) || parseInt(customCalories, 10) < 0)) {
+      showMessage({ message: 'Informe um valor válido para as calorias.', type: 'danger' });
       return;
     }
     if (!token || !userId) {
@@ -366,12 +365,21 @@ export default function ExploreScreen() {
         }));
       }
 
-      // estimate calories for the custom workout and include it in payload
-      try {
-        const est = payload.durationInMinutes ? estimateCalories(payload.durationInMinutes, undefined, weightKg) : undefined;
-        if (typeof est === 'number' && !Number.isNaN(est)) payload.caloriesBurnt = Math.round(est);
-      } catch {
-        // ignore
+      // Use manual calorie input if provided, otherwise estimate
+      if (customCalories && !Number.isNaN(parseInt(customCalories, 10))) {
+        payload.caloriesBurnt = parseInt(customCalories, 10);
+        payload.caloriesEstimated = false;
+      } else {
+        // estimate calories for the custom workout and include it in payload
+        try {
+          const est = payload.durationInMinutes ? estimateCalories(payload.durationInMinutes, undefined, weightKg) : undefined;
+          if (typeof est === 'number' && !Number.isNaN(est)) {
+            payload.caloriesBurnt = Math.round(est);
+            payload.caloriesEstimated = true;
+          }
+        } catch {
+          // ignore
+        }
       }
 
       let resp;
@@ -390,7 +398,6 @@ export default function ExploreScreen() {
       }
       if (!resp.ok) {
         const text = await resp.text();
-        console.log('createCustomWorkout failed', resp.status, text);
         showMessage({ message: 'Erro ao criar treino personalizado.', type: 'danger' });
         return;
       }
@@ -425,8 +432,8 @@ export default function ExploreScreen() {
       setCustomName('');
       setCustomDuration('20');
       setCustomNotes('');
+      setCustomCalories('');
     } catch (err) {
-      console.log('Error creating custom workout', err);
       showMessage({ message: 'Erro ao criar treino.', type: 'danger' });
     } finally {
       setStarting(false);
@@ -439,6 +446,7 @@ export default function ExploreScreen() {
     setCustomName(w.name ?? '');
     setCustomDuration(String(w.durationMinutes ?? 20));
     setCustomNotes(w.description ?? '');
+    setCustomCalories(w.caloriesBurnt && !w.caloriesEstimated ? String(Math.round(w.caloriesBurnt)) : '');
     setCustomExercises(w.exercises ? w.exercises.map((ex: any) => ({ ...ex })) : []);
     setModalVisible(true);
   };
@@ -497,7 +505,6 @@ export default function ExploreScreen() {
           showMessage({ message: `Treino '${w.name}' adicionado localmente (erro ao salvar no servidor)`, type: 'warning' });
         }
       } catch (error) {
-        console.log('Error saving recommended workout:', error);
         // If network fails, still add to local workouts
         setWorkouts((prev) => {
           const updated = [{ ...w, id: `local-${Date.now()}` }, ...(prev || [])];
@@ -906,6 +913,8 @@ export default function ExploreScreen() {
             style={styles.modalScrollView}
             contentContainerStyle={styles.modalScrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           >
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Treino personalizado</Text>
@@ -925,6 +934,14 @@ export default function ExploreScreen() {
                   placeholder="Duração (min)" 
                   value={customDuration} 
                   onChangeText={setCustomDuration} 
+                  keyboardType="numeric" 
+                  style={[styles.input, { flex: screenWidth <= 400 ? 1 : 0.5 }]}
+                  placeholderTextColor="#94a3b8"
+                />
+                <TextInput 
+                  placeholder="Calorias queimadas" 
+                  value={customCalories} 
+                  onChangeText={setCustomCalories} 
                   keyboardType="numeric" 
                   style={[styles.input, { flex: screenWidth <= 400 ? 1 : 0.5 }]}
                   placeholderTextColor="#94a3b8"
@@ -1028,7 +1045,7 @@ export default function ExploreScreen() {
                 />
               </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'flex-end', width: '100%', marginBottom: 16 }}>
                 <TouchableOpacity
                   style={[styles.saveBtn, { paddingHorizontal: 16 }]}
                   onPress={() => {
@@ -1126,7 +1143,7 @@ export default function ExploreScreen() {
             </View>
             <Text style={{ color: '#64748b', marginBottom: 12 }}>{selectedWorkout?.description}</Text>
             <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-              <Text style={{ color: '#334155', marginRight: 16 }}>{selectedWorkout?.durationMinutes ?? 20} min</Text>
+              <Text style={{ color: '#334155', marginRight: 16 }}>{selectedWorkout?.durationMinutes} min</Text>
               {selectedWorkout?.caloriesBurnt ? (
                 <Text style={{ color: '#334155' }}>
                   {selectedWorkout?.caloriesEstimated ? `est. ${Math.round(selectedWorkout?.caloriesBurnt ?? 0)} kcal` : `${Math.round(selectedWorkout?.caloriesBurnt ?? 0)} kcal`}
@@ -1170,7 +1187,7 @@ export default function ExploreScreen() {
                 <View style={styles.workoutPreviewDetails}>
                   <View style={styles.workoutDetailItem}>
                     <MaterialCommunityIcons name="clock-outline" size={16} color="#64748b" />
-                    <Text style={styles.workoutDetailText}>{workoutToDelete.durationMinutes ?? 20} min</Text>
+                    <Text style={styles.workoutDetailText}>{workoutToDelete.durationMinutes} min</Text>
                   </View>
                   {typeof workoutToDelete.caloriesBurnt === 'number' && (
                     <View style={styles.workoutDetailItem}>
@@ -1391,7 +1408,8 @@ const styles = StyleSheet.create({
   },
   modalScrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingBottom: 16,
   },
   modalCard: { 
     width: '100%', 
@@ -1431,8 +1449,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   modalActions: { 
-    flexDirection: screenWidth <= 400 ? 'column' : 'row', 
+    flexDirection: screenWidth <= 440 ? 'column' : 'row', 
     justifyContent: 'flex-end',
+    alignItems: 'stretch',
+    width: '100%',
     marginTop: 24,
     gap: 12,
   },
@@ -1677,7 +1697,7 @@ const styles = StyleSheet.create({
   },
   // Estilos dos botões do modal
   modalCancelBtn: {
-    flex: screenWidth <= 400 ? 1 : 0,
+    flex: screenWidth <= 440 ? 1 : 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1702,7 +1722,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   modalSaveBtn: {
-    flex: screenWidth <= 400 ? 1 : 0,
+    flex: screenWidth <= 440 ? 1 : 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

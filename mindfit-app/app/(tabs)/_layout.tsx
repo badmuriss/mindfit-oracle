@@ -19,17 +19,17 @@ export default function TabsLayout() {
           borderTopWidth: 1,
           borderTopColor: '#f1f5f9',
           paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 8,
-          height: Math.max(65 + insets.bottom, 65),
-          paddingHorizontal: Math.max(width * 0.05, 16),
+          paddingTop: 12,
+          height: Math.max(80 + insets.bottom, 80),
+          paddingHorizontal: 16,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: '600',
-          marginBottom: 2,
+          marginBottom: 4,
         },
         tabBarIconStyle: {
-          marginBottom: 2,
+          marginBottom: 4,
         },
       }}
     >
@@ -38,8 +38,8 @@ export default function TabsLayout() {
         options={{ 
           title: '',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="home" size={26} color={color} />
           ),
         }} 
       />
@@ -48,8 +48,8 @@ export default function TabsLayout() {
         options={{ 
           title: '',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="dumbbell" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="dumbbell" size={26} color={color} />
           ),
         }} 
       />
@@ -58,8 +58,8 @@ export default function TabsLayout() {
         options={{ 
           title: '',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="robot-excited" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="robot-excited" size={26} color={color} />
           ),
         }} 
       />
@@ -68,8 +68,8 @@ export default function TabsLayout() {
         options={{ 
           title: '',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="food-apple" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="food-apple" size={26} color={color} />
           ),
         }} 
       />
@@ -78,8 +78,8 @@ export default function TabsLayout() {
         options={{ 
           title: '',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="account" size={26} color={color} />
           ),
         }} 
       />

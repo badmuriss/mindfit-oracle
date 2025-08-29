@@ -3,7 +3,9 @@ package com.mindfit.api.controller;
 import com.mindfit.api.dto.*;
 import com.mindfit.api.service.UserService;
 import com.mindfit.api.service.ChatbotService;
+import com.mindfit.api.service.RateLimitService;
 import com.mindfit.api.mapper.UserMapper;
+import com.mindfit.api.common.exception.BadRequestException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +25,7 @@ public class UserController {
 
     private final UserService userService;
     private final ChatbotService chatbotService;
+    private final RateLimitService rateLimitService;
     private final UserMapper userMapper;
 
     @GetMapping
@@ -54,9 +57,17 @@ public class UserController {
     }
     
     @PostMapping("/{id}/generate-profile")
-    @Operation(summary = "Generate user profile based on their registration data")
-    public UserProfileResponse generateUserProfile(@PathVariable String id) {
-        String profile = chatbotService.generateUserProfile(id);
+    @Operation(summary = "Generate user profile based on observations and user data")
+    public UserProfileResponse generateUserProfile(
+            @PathVariable String id, 
+            @Valid @RequestBody ProfileGenerationRequest request) {
+        
+        // Rate limiting: 5 profile generations per hour per user
+        if (!rateLimitService.createBucketForProfileGeneration(id).tryConsume(1)) {
+            throw new BadRequestException("Rate limit exceeded. Please try again later.");
+        }
+        
+        String profile = chatbotService.generateUserProfile(id, request.observations());
         return new UserProfileResponse(profile);
     }
 }
