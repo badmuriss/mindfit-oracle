@@ -11,8 +11,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
-    networks:
-      - mindfit-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
       interval: 30s
@@ -37,8 +35,6 @@ services:
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8082,http://localhost:8083}
     ports:
       - "8088:8080"
-    networks:
-      - mindfit-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
       interval: 30s
@@ -58,8 +54,6 @@ services:
       - api
     ports:
       - "8082:80"
-    networks:
-      - mindfit-network
 
   app:
     build:
@@ -73,12 +67,6 @@ services:
       - api
     ports:
       - "8083:80"
-    networks:
-      - mindfit-network
-
-networks:
-  mindfit-network:
-    driver: bridge
 
 volumes:
   mongo_data:
