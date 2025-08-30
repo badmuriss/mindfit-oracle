@@ -178,7 +178,7 @@ public class ChatbotService {
                 if (measurements.hasContent()) {
                     profileBuilder.append("RECENT MEASUREMENTS:\n");
                     measurements.getContent().forEach(measurement -> {
-                        profileBuilder.append("- Weight: ").append(measurement.weightInKG()).append(" kg");
+                        profileBuilder.append("- Weight: ").append(measurement.weightInKG()).append(" kg (ITS KILOS NOT POUNDS)");
                         if (measurement.heightInCM() != null) {
                             profileBuilder.append(", Height: ").append(measurement.heightInCM()).append(" cm");
                         }

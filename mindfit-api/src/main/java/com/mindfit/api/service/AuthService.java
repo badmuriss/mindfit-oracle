@@ -3,7 +3,6 @@ package com.mindfit.api.service;
 import com.mindfit.api.dto.JwtResponse;
 import com.mindfit.api.dto.LoginRequest;
 import com.mindfit.api.dto.UserSignupRequest;
-import com.mindfit.api.dto.MeasurementsRegisterCreateRequest;
 import com.mindfit.api.common.exception.UnauthorizedException;
 import com.mindfit.api.mapper.UserMapper;
 import com.mindfit.api.model.MeasurementsRegister;
@@ -113,17 +112,17 @@ public class AuthService {
         LocalDateTime lastLogOn = user.getLastLogonDate();
         
         // Check if this is first login this week
-        if (isFirstLoginThisWeek(lastLogOn, now)) {
-            // Profile generation is now handled by ChatbotService on first chat interaction
+        if (isFirstLogonThisWeek(lastLogOn, now)) {
+            chatbotService.generateUserProfile(user.getId(), "");
         }
         
         user.setLastLogonDate(now);
         userRepository.save(user);
     }
     
-    private boolean isFirstLoginThisWeek(LocalDateTime lastLogOn, LocalDateTime now) {
+    private boolean isFirstLogonThisWeek(LocalDateTime lastLogOn, LocalDateTime now) {
         if (lastLogOn == null) {
-            return true; // First login ever
+            return false;
         }
         
         WeekFields weekFields = WeekFields.of(Locale.getDefault());
