@@ -37,6 +37,28 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const loadToken = async () => {
+      // Se ambiente de desenvolvimento, força login
+      if (__DEV__) {
+        setToken('dev-token-12345');
+        setUserName('Gabriel Freitas');
+        setUserEmail('gabriel.freitas@mindfit.com');
+        setUserId('dev-user-001');
+        
+        // Adicionar dados fictícios no AsyncStorage para simular dados salvos
+        await AsyncStorage.multiSet([
+          ['userToken', 'dev-token-12345'],
+          ['userName', 'Gabriel Freitas'],
+          ['userEmail', 'gabriel.freitas@mindfit.com'],
+          ['userId', 'dev-user-001'],
+        ]);
+        
+        console.log('🔧 DEV MODE: Usuário fictício logado automaticamente');
+        console.log('📊 DEV MODE: Dados de exemplo carregados');
+        
+        setLoading(false);
+        return;
+      }
+      // ...código original para produção...
       const storedToken = await AsyncStorage.getItem('userToken');
       const storedName = await AsyncStorage.getItem('userName');
       const storedEmail = await AsyncStorage.getItem('userEmail');
@@ -54,10 +76,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Loaded userId from storage:', storedUserId);
         setUserId(storedUserId);
       }
-  setLoading(false);
+      setLoading(false);
     };
     loadToken();
-  console.log('UserProvider mounted');
+    console.log('UserProvider mounted');
   }, []);
 
   const logout = async () => {
