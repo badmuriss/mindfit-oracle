@@ -33,6 +33,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}
       JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentPleaseChangeInProduction123456789012345678901234567890}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8082,http://localhost:8083}
+      LOGS_BASIC_USERNAME: ${LOGS_BASIC_USERNAME:-logs}
+      LOGS_BASIC_PASSWORD: ${LOGS_BASIC_PASSWORD:-logs}
     ports:
       - "8088:8088"
     healthcheck:
