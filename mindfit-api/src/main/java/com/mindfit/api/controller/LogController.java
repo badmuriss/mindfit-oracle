@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/logs")
 @RequiredArgsConstructor
 @Tag(name = "Logs", description = "Log management API")
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "basicAuth")
 public class LogController {
 
     private final LogService logService;

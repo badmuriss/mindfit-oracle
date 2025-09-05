@@ -19,7 +19,11 @@ public class OpenApiConfig {
                                 new SecurityScheme()
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
-                                        .bearerFormat("JWT")))
+                                        .bearerFormat("JWT"))
+                        .addSecuritySchemes("basicAuth",
+                                new SecurityScheme()
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("basic")))
                 .info(new Info()
                         .title("Mindfit API")
                         .description("Spring Boot + MongoDB backend for fitness/diet system")
