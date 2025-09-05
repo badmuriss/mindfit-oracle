@@ -88,10 +88,12 @@ public class SecurityConfig {
     public SecurityFilterChain logsFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/logs/**")
-                .cors(Customizer.withDefaults())
+                .cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().hasAnyRole("ADMIN", "SUPER_ADMIN"))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .anyRequest().hasAnyRole("ADMIN", "SUPER_ADMIN"))
                 .httpBasic(Customizer.withDefaults())
                 .authenticationProvider(logsAuthenticationProvider());
 
