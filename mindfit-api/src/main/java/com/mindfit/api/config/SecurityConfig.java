@@ -93,7 +93,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().hasAnyRole("ADMIN", "SUPER_ADMIN"))
+                        .anyRequest().permitAll()) //.hasAnyRole("ADMIN", "SUPER_ADMIN"))
                 .httpBasic(Customizer.withDefaults())
                 .authenticationProvider(logsAuthenticationProvider());
 
