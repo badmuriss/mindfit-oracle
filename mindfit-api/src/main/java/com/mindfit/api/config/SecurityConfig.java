@@ -54,9 +54,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService logsUserDetailsService() {
+    public UserDetailsService logsUserDetailsService(PasswordEncoder passwordEncoder) {
         UserDetails user = User.withUsername(logsUsername)
-                .password(passwordEncoder().encode(logsPassword))
+                .password(passwordEncoder.encode(logsPassword))
                 .roles("ADMIN")
                 .build();
         return new InMemoryUserDetailsManager(user);
@@ -70,11 +70,11 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    @Bean
-    public DaoAuthenticationProvider logsAuthenticationProvider() {
+    private DaoAuthenticationProvider logsAuthenticationProvider(UserDetailsService logsUserDetailsService,
+                                                                 PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(logsUserDetailsService());
-        authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setUserDetailsService(logsUserDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
 
@@ -85,7 +85,9 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain logsFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain logsFilterChain(HttpSecurity http,
+                                               UserDetailsService logsUserDetailsService,
+                                               PasswordEncoder passwordEncoder) throws Exception {
         http
                 .securityMatcher("/logs/**")
                 .cors(AbstractHttpConfigurer::disable)
@@ -95,7 +97,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().permitAll()) //.hasAnyRole("ADMIN", "SUPER_ADMIN"))
                 .httpBasic(Customizer.withDefaults())
-                .authenticationProvider(logsAuthenticationProvider());
+                .authenticationProvider(logsAuthenticationProvider(logsUserDetailsService, passwordEncoder));
 
         return http.build();
     }
