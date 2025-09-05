@@ -92,12 +92,12 @@ public class SecurityConfig {
                 .securityMatcher("/logs/**")
                 .cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().permitAll()) //.hasAnyRole("ADMIN", "SUPER_ADMIN"))
-                .httpBasic(Customizer.withDefaults())
-                .authenticationProvider(logsAuthenticationProvider(logsUserDetailsService, passwordEncoder));
+                .httpBasic(Customizer.withDefaults());
+               // .authenticationProvider(logsAuthenticationProvider(logsUserDetailsService, passwordEncoder));
 
         return http.build();
     }
