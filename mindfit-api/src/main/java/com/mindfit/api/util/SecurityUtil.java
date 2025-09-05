@@ -2,6 +2,7 @@ package com.mindfit.api.util;
 
 import com.mindfit.api.model.User;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -32,21 +33,55 @@ public class SecurityUtil {
     }
     
     public static boolean isAdmin() {
-        User currentUser = getCurrentUser();
-        return currentUser.getRoles().stream()
-                .anyMatch(role -> role.name().equals("ADMIN") || role.name().equals("SUPER_ADMIN"));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User user) {
+            return user.getRoles().stream()
+                    .anyMatch(role -> role.name().equals("ADMIN") || role.name().equals("SUPER_ADMIN"));
+        }
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals("ROLE_ADMIN") || auth.equals("ROLE_SUPER_ADMIN"));
     }
-    
+
     public static boolean isSuperAdmin() {
-        User currentUser = getCurrentUser();
-        return currentUser.getRoles().stream()
-                .anyMatch(role -> role.name().equals("SUPER_ADMIN"));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User user) {
+            return user.getRoles().stream()
+                    .anyMatch(role -> role.name().equals("SUPER_ADMIN"));
+        }
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals("ROLE_SUPER_ADMIN"));
     }
-    
+
     public static boolean isRegularAdmin() {
-        User currentUser = getCurrentUser();
-        return currentUser.getRoles().stream()
-                .anyMatch(role -> role.name().equals("ADMIN")) &&
-               !isSuperAdmin();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof User user) {
+            return user.getRoles().stream()
+                    .anyMatch(role -> role.name().equals("ADMIN")) &&
+                   !isSuperAdmin();
+        }
+
+        boolean isAdminAuthority = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals("ROLE_ADMIN"));
+        return isAdminAuthority && !isSuperAdmin();
     }
 }
