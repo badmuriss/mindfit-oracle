@@ -331,7 +331,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.meals = response.content || [];
-          this.mealsTotalElements = response.totalElements || 0;
+          this.mealsTotalElements = response.page.totalElements || 0;
           this.mealsLoading = false;
         },
         error: (error) => {
@@ -357,7 +357,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.exercises = response.content || [];
-          this.exercisesTotalElements = response.totalElements || 0;
+          this.exercisesTotalElements = response.page.totalElements || 0;
           this.exercisesLoading = false;
         },
         error: (error) => {
@@ -383,7 +383,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.measurements = response.content || [];
-          this.measurementsTotalElements = response.totalElements || 0;
+          this.measurementsTotalElements = response.page.totalElements || 0;
           this.measurementsLoading = false;
         },
         error: (error) => {

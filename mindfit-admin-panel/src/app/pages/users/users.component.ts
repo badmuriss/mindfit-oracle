@@ -144,7 +144,7 @@ export class UsersComponent implements OnInit, OnDestroy {
             this.totalElements = filtered.length;
           } else {
             this.users = serverData;
-            this.totalElements = response.totalElements || serverData.length || 0;
+            this.totalElements = response.page.totalElements || serverData.length || 0;
           }
           this.loading = false;
         },
