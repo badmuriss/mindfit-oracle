@@ -73,7 +73,7 @@ export interface LogEntry {
                 <mat-select formControlName="type">
                   <mat-option value="">All Types</mat-option>
                   <mat-option value="ERROR">Error</mat-option>
-                  <mat-option value="WARN">Warning</mat-option>
+                  <mat-option value="WARNING">Warning</mat-option>
                   <mat-option value="INFO">Info</mat-option>
                 </mat-select>
               </mat-form-field>
