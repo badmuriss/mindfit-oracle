@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, switchMap } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -130,6 +130,7 @@ export interface LogEntry {
 })
 export class LogsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private loadLogs$ = new Subject<void>();
 
   logs: LogEntry[] = [];
   totalElements = 0;
@@ -162,26 +163,21 @@ export class LogsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadLogs();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  loadLogs(): void {
-    this.loading = true;
-
-    const params: PaginationParams = {
-      page: this.pageIndex,
-      size: this.pageSize,
-      sort: this.currentSort,
-      ...this.currentFilters
-    };
-
-    this.apiService.get<any>('/logs', params)
-      .pipe(takeUntil(this.destroy$))
+    // Set up loading stream to prevent race conditions
+    this.loadLogs$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(() => {
+          this.loading = true;
+          const params: PaginationParams = {
+            page: this.pageIndex,
+            size: this.pageSize,
+            sort: this.currentSort,
+            ...this.currentFilters
+          };
+          return this.apiService.get<any>('/logs', params);
+        })
+      )
       .subscribe({
         next: (response) => {
           this.logs = response.content || [];
@@ -193,6 +189,17 @@ export class LogsComponent implements OnInit, OnDestroy {
           this.loading = false;
         }
       });
+
+    this.loadLogs();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadLogs(): void {
+    this.loadLogs$.next();
   }
 
   onPageChange(event: PageEvent): void {

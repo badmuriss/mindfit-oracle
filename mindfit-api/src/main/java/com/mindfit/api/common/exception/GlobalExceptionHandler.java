@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -150,18 +151,36 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        logService.logError("METHOD_NOT_ALLOWED", ex.getClass().getSimpleName(), ex.getMessage());
+
+        String supportedMethods = ex.getSupportedMethods() != null ?
+            String.join(", ", ex.getSupportedMethods()) : "None";
+
+        ErrorResponse error = ErrorResponse.of(
+                "HTTP method '" + ex.getMethod() + "' is not supported for this endpoint.",
+                "METHOD_NOT_ALLOWED",
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(error);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatusException(
             ResponseStatusException ex, HttpServletRequest request) {
         logService.logError("RESPONSE_STATUS_ERROR", ex.getClass().getSimpleName(), ex.getMessage());
-        
+
         ErrorResponse error = ErrorResponse.of(
                 ex.getReason() != null ? ex.getReason() : "An error occurred",
                 "RESPONSE_STATUS_ERROR",
                 ex.getStatusCode().value(),
                 request.getRequestURI()
         );
-        
+
         return ResponseEntity.status(ex.getStatusCode()).body(error);
     }
 

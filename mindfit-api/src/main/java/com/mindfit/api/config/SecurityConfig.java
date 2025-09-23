@@ -29,6 +29,11 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -47,6 +52,7 @@ public class SecurityConfig {
 
     @Value("${LOGS_BASIC_PASSWORD:logs}")
     private String logsPassword;
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -70,13 +76,6 @@ public class SecurityConfig {
         return authProvider;
     }
 
-    private DaoAuthenticationProvider logsAuthenticationProvider(UserDetailsService logsUserDetailsService,
-                                                                 PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(logsUserDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder);
-        return authProvider;
-    }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -92,12 +91,21 @@ public class SecurityConfig {
                 .securityMatcher("/logs/**")
                 .cors(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
-                //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().permitAll()) //.hasAnyRole("ADMIN", "SUPER_ADMIN"))
-                .httpBasic(Customizer.withDefaults());
-               // .authenticationProvider(logsAuthenticationProvider(logsUserDetailsService, passwordEncoder));
+                        .anyRequest().hasAnyRole("ADMIN", "SUPER_ADMIN"))
+                .httpBasic(Customizer.withDefaults())
+                .userDetailsService(logsUserDetailsService)
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Authentication required\"}");
+                        }))
+                .anonymous(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
@@ -119,7 +127,14 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Authentication required\"}");
+                        }))
+                .anonymous(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
