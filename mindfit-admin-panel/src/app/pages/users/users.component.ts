@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, switchMap } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 
 import { DataTableComponent, TableColumn, TableAction, TableFilters } from '../../shared/components/data-table/data-table.component';
@@ -55,6 +55,7 @@ export interface User {
 })
 export class UsersComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private loadUsers$ = new Subject<void>();
 
   users: User[] = [];
   totalElements = 0;
@@ -107,26 +108,21 @@ export class UsersComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.loadUsers();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  loadUsers(): void {
-    this.loading = true;
-    
-    const params: PaginationParams = {
-      page: this.pageIndex,
-      size: this.pageSize,
-      sort: this.currentSort || 'createdAt,desc',
-      ...this.currentFilters
-    };
-
-    this.apiService.get<any>('/users', params)
-      .pipe(takeUntil(this.destroy$))
+    // Set up loading stream to prevent race conditions
+    this.loadUsers$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap(() => {
+          this.loading = true;
+          const params: PaginationParams = {
+            page: this.pageIndex,
+            size: this.pageSize,
+            sort: this.currentSort || 'createdAt,desc',
+            ...this.currentFilters
+          };
+          return this.apiService.get<any>('/users', params);
+        })
+      )
       .subscribe({
         next: (response) => {
           const serverData: User[] = response.content || [];
@@ -153,6 +149,17 @@ export class UsersComponent implements OnInit, OnDestroy {
           this.loading = false;
         }
       });
+
+    this.loadUsers();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadUsers(): void {
+    this.loadUsers$.next();
   }
 
   onPageChange(event: PageEvent): void {

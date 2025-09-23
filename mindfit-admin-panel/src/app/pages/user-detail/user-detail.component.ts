@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, switchMap } from 'rxjs';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -204,6 +204,10 @@ export interface Measurement {
 })
 export class UserDetailComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private loadMeals$ = new Subject<PaginationParams>();
+  private loadExercises$ = new Subject<PaginationParams>();
+  private loadMeasurements$ = new Subject<PaginationParams>();
+
   userId!: string;
   user: User | null = null;
 
@@ -278,6 +282,70 @@ export class UserDetailComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.userId = this.route.snapshot.params['id'];
     this.loadUser();
+
+    // Set up meals loading stream
+    this.loadMeals$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((params) => {
+          this.mealsLoading = true;
+          return this.apiService.get<any>(`/users/${this.userId}/meals`, params);
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.meals = response.content || [];
+          this.mealsTotalElements = response.totalElements || 0;
+          this.mealsLoading = false;
+        },
+        error: (error) => {
+          console.error('Failed to load meals:', error);
+          this.mealsLoading = false;
+        }
+      });
+
+    // Set up exercises loading stream
+    this.loadExercises$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((params) => {
+          this.exercisesLoading = true;
+          return this.apiService.get<any>(`/users/${this.userId}/exercises`, params);
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.exercises = response.content || [];
+          this.exercisesTotalElements = response.totalElements || 0;
+          this.exercisesLoading = false;
+        },
+        error: (error) => {
+          console.error('Failed to load exercises:', error);
+          this.exercisesLoading = false;
+        }
+      });
+
+    // Set up measurements loading stream
+    this.loadMeasurements$
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((params) => {
+          this.measurementsLoading = true;
+          return this.apiService.get<any>(`/users/${this.userId}/measurements`, params);
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.measurements = response.content || [];
+          this.measurementsTotalElements = response.totalElements || 0;
+          this.measurementsLoading = false;
+        },
+        error: (error) => {
+          console.error('Failed to load measurements:', error);
+          this.measurementsLoading = false;
+        }
+      });
+
     this.loadMeals();
   }
 
@@ -325,20 +393,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
   }
 
   loadMealsWithParams(params: PaginationParams): void {
-    this.mealsLoading = true;
-    this.apiService.get<any>(`/users/${this.userId}/meals`, params)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.meals = response.content || [];
-          this.mealsTotalElements = response.totalElements || 0;
-          this.mealsLoading = false;
-        },
-        error: (error) => {
-          console.error('Failed to load meals:', error);
-          this.mealsLoading = false;
-        }
-      });
+    this.loadMeals$.next(params);
   }
 
   loadExercises(): void {
@@ -351,20 +406,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
   }
 
   loadExercisesWithParams(params: PaginationParams): void {
-    this.exercisesLoading = true;
-    this.apiService.get<any>(`/users/${this.userId}/exercises`, params)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.exercises = response.content || [];
-          this.exercisesTotalElements = response.totalElements || 0;
-          this.exercisesLoading = false;
-        },
-        error: (error) => {
-          console.error('Failed to load exercises:', error);
-          this.exercisesLoading = false;
-        }
-      });
+    this.loadExercises$.next(params);
   }
 
   loadMeasurements(): void {
@@ -377,20 +419,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
   }
 
   loadMeasurementsWithParams(params: PaginationParams): void {
-    this.measurementsLoading = true;
-    this.apiService.get<any>(`/users/${this.userId}/measurements`, params)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.measurements = response.content || [];
-          this.measurementsTotalElements = response.totalElements || 0;
-          this.measurementsLoading = false;
-        },
-        error: (error) => {
-          console.error('Failed to load measurements:', error);
-          this.measurementsLoading = false;
-        }
-      });
+    this.loadMeasurements$.next(params);
   }
 
   onMealsPageChange(event: PageEvent): void {
