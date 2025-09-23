@@ -1,10 +1,9 @@
 // app/(tabs)/home.tsx
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
@@ -43,6 +42,71 @@ const HomeScreen = () => {
   const loadLatest = useCallback(async () => {
     if (!token || !userId) return;
     setMeasurementLoading(true);
+    
+    // Mock de dados para desenvolvimento
+    if (__DEV__ && userId === 'dev-user-001') {
+      console.log('🔧 DEV MODE: Carregando dados fictícios de medições');
+      
+      // Simular dados de exemplo dos últimos 30 dias
+      const mockData = [];
+      const today = new Date();
+      
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+        // Peso varia entre 77-82kg com tendência de redução
+        const baseWeight = 82 - (i * 0.1) + (Math.random() * 1 - 0.5);
+        
+        mockData.push({
+          id: `mock-${i}`,
+          weightInKG: Number(baseWeight.toFixed(1)),
+          heightInCM: 178,
+          timestamp: date.toISOString(),
+          userId: 'dev-user-001'
+        });
+      }
+      
+      // Processar dados como na API real
+      const items = mockData.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      // Extrair histórico de peso - apenas um registro por dia (o mais recente)
+      const weightByDay = new Map<string, any>();
+      
+      items
+        .filter((item: any) => item.weightInKG != null)
+        .forEach((item: any) => {
+          const dateKey = new Date(item.timestamp).toDateString();
+          if (!weightByDay.has(dateKey) || new Date(item.timestamp) > new Date(weightByDay.get(dateKey).timestamp)) {
+            weightByDay.set(dateKey, item);
+          }
+        });
+      
+      // Converter para array e pegar os últimos 10 dias
+      const weightHistoryData = Array.from(weightByDay.values())
+        .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(-10)
+        .map((item: any) => ({
+          weight: item.weightInKG,
+          date: new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        }));
+      
+      setWeightHistory(weightHistoryData);
+      
+      const latest = items[0];
+      setWeightKg(latest.weightInKG ?? null);
+      setHeightCm(latest.heightInCM ?? null);
+      
+      if (items.length > 1) {
+        const prev = items[1];
+        if (prev && typeof prev.weightInKG === 'number' && typeof latest.weightInKG === 'number') {
+          setDeltaKg(Number((latest.weightInKG - prev.weightInKG).toFixed(1)));
+        }
+      }
+      
+      setMeasurementLoading(false);
+      console.log('📊 DEV MODE: Dados fictícios carregados:', { peso: latest.weightInKG, altura: latest.heightInCM });
+      return;
+    }
+    
     try {
       const resp = await fetch(API_ENDPOINTS.USERS.MEASUREMENTS(userId), {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -386,28 +450,33 @@ const HomeScreen = () => {
           </View>
         </View>
         </View>
-        <View style={styles.chartCard}>
-          <View style={styles.weightInfo}>
-            {measurementLoading ? (
-              <ActivityIndicator size="small" />
-            ) : (
-              <Text style={styles.weightValue}>{weightKg != null ? `${weightKg.toFixed(1)} kg` : '—'}</Text>
-            )}
-            <Text style={[styles.weightDelta, deltaKg != null ? (deltaKg <= 0 ? styles.deltaDown : styles.deltaUp) : {}]}>
-              {deltaKg != null ? `${deltaKg > 0 ? '+' : ''}${deltaKg.toFixed(1)} kg` : '-'}
-            </Text>
-            <Text style={styles.heightText}>{heightCm ? `Altura: ${heightCm} cm` : ''}</Text>
-          </View>
-          <View style={styles.chartContainer}>
-            {weightHistory.length > 0 || weightKg != null ? (
-              renderWeightChart()
-            ) : (
-              <View style={styles.noDataContainer}>
-                <MaterialCommunityIcons name="chart-line" size={32} color="#cbd5e1" />
-                <Text style={styles.noDataText}>Sem dados de peso</Text>
-                <Text style={styles.noDataSubtext}>Adicione algumas medições para ver o gráfico</Text>
-              </View>
-            )}
+
+        {/* Seção do gráfico separada */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Evolução do Peso</Text>
+          <View style={styles.chartCard}>
+            <View style={styles.weightInfo}>
+              {measurementLoading ? (
+                <ActivityIndicator size="small" />
+              ) : (
+                <Text style={styles.weightValue}>{weightKg != null ? `${weightKg.toFixed(1)} kg` : '—'}</Text>
+              )}
+              <Text style={[styles.weightDelta, deltaKg != null ? (deltaKg <= 0 ? styles.deltaDown : styles.deltaUp) : {}]}>
+                {deltaKg != null ? `${deltaKg > 0 ? '+' : ''}${deltaKg.toFixed(1)} kg` : '-'}
+              </Text>
+              <Text style={styles.heightText}>{heightCm ? `Altura: ${heightCm} cm` : ''}</Text>
+            </View>
+            <View style={styles.chartContainer}>
+              {weightHistory.length > 0 || weightKg != null ? (
+                renderWeightChart()
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <MaterialCommunityIcons name="chart-line" size={32} color="#cbd5e1" />
+                  <Text style={styles.noDataText}>Sem dados de peso</Text>
+                  <Text style={styles.noDataSubtext}>Adicione algumas medições para ver o gráfico</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -454,7 +523,7 @@ const styles = StyleSheet.create({
   kpiRow: {
     flexDirection: screenWidth < 400 ? 'column' : 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 0,
     gap: 16,
   },
   kpiBox: {
@@ -559,7 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: screenWidth < 400 ? 16 : 24,
     paddingBottom: 40,
-    marginTop: 12,
+    marginTop: 0,
     shadowColor: '#0f172a',
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 10 },
@@ -634,12 +703,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 32,
     gap: screenWidth < 440 ? 10 : 16,
+    paddingHorizontal: screenWidth < 400 ? 4 : 0,
   },
   card: {
-    width: screenWidth < 440 ? '47%' : '48%',
+    width: screenWidth < 350 ? '100%' : screenWidth < 440 ? '47%' : '48%',
     backgroundColor: '#ffffff',
-    padding: screenWidth < 440 ? 16 : 28,
-    borderRadius: screenWidth < 440 ? 18 : 24,
+    padding: screenWidth < 350 ? 12 : screenWidth < 440 ? 16 : 28,
+    borderRadius: screenWidth < 350 ? 14 : screenWidth < 440 ? 18 : 24,
     alignItems: 'center',
     shadowColor: '#0f172a',
     shadowOpacity: 0.12,
@@ -649,6 +719,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     transform: [{ scale: 1 }],
+    marginBottom: screenWidth < 350 ? 12 : 0,
   },
   cardLabel: {
     marginTop: screenWidth < 440 ? 10 : 16,

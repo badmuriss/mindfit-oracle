@@ -44,7 +44,24 @@ export interface LogEntry {
   template: `
     <div class="container mx-auto p-4 sm:p-6">
       <h1 class="text-2xl font-bold text-gray-900 mb-6">System Logs</h1>
-      
+
+      <!-- Responsive Chart Section -->
+      <div class="grid gap-6 mb-6 md:grid-cols-2">
+        <div class="relative w-full pt-[75%]">
+          <iframe
+            class="absolute inset-0 w-full h-full rounded-lg shadow"
+            frameborder="0"
+            src="https://analytics.zoho.com/open-view/3117779000000004246/cf5a625e9d9a75dcf2f247f830bcb5d4"
+          ></iframe>
+        </div>
+        <div class="relative w-full pt-[75%]">
+          <iframe
+            class="absolute inset-0 w-full h-full rounded-lg shadow"
+            frameborder="0"
+            src="https://analytics.zoho.com/open-view/3117779000000004228/960d27d124a62a624887ad319a6d7623"
+          ></iframe>
+        </div>
+      </div>
 
       <!-- Filters -->
       <mat-card class="mb-4">
@@ -56,7 +73,7 @@ export interface LogEntry {
                 <mat-select formControlName="type">
                   <mat-option value="">All Types</mat-option>
                   <mat-option value="ERROR">Error</mat-option>
-                  <mat-option value="WARN">Warning</mat-option>
+                  <mat-option value="WARNING">Warning</mat-option>
                   <mat-option value="INFO">Info</mat-option>
                 </mat-select>
               </mat-form-field>
@@ -101,7 +118,7 @@ export interface LogEntry {
         [showCreateButton]="false"
         (pageChange)="onPageChange($event)"
         (sortChange)="onSortChange($event)"
-        >
+      >
       </app-data-table>
     </div>
   `,
@@ -132,7 +149,6 @@ export class LogsComponent implements OnInit, OnDestroy {
 
   private currentFilters: TableFilters = {};
   private currentSort = 'timestamp,desc';
- 
 
   constructor(
     private fb: FormBuilder,
@@ -156,7 +172,7 @@ export class LogsComponent implements OnInit, OnDestroy {
 
   loadLogs(): void {
     this.loading = true;
-    
+
     const params: PaginationParams = {
       page: this.pageIndex,
       size: this.pageSize,
@@ -169,7 +185,7 @@ export class LogsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.logs = response.content || [];
-          this.totalElements = response.totalElements || 0;
+          this.totalElements = response.page.totalElements || 0;
           this.loading = false;
         },
         error: (error) => {
@@ -178,8 +194,6 @@ export class LogsComponent implements OnInit, OnDestroy {
         }
       });
   }
-
-  
 
   onPageChange(event: PageEvent): void {
     this.pageIndex = event.pageIndex;
@@ -204,7 +218,6 @@ export class LogsComponent implements OnInit, OnDestroy {
     if (from) mapped.startDate = this.toDateOnly(from);
     if (to) mapped.endDate = this.toDateOnly(to);
 
-    // Reset filter keys we control
     delete (this.currentFilters as any).type;
     delete (this.currentFilters as any).startDate;
     delete (this.currentFilters as any).endDate;
@@ -229,15 +242,5 @@ export class LogsComponent implements OnInit, OnDestroy {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
-  }
-
-  private cleanFilters(filters: any): any {
-    const cleaned: any = {};
-    Object.keys(filters).forEach(key => {
-      if (filters[key] !== null && filters[key] !== '') {
-        cleaned[key] = filters[key];
-      }
-    });
-    return cleaned;
   }
 }

@@ -5,10 +5,12 @@ import { environment } from '../../environments/environment';
 
 export interface PaginatedResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
+  page: {
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  }
 }
 
 export interface PaginationParams {

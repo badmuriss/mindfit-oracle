@@ -221,6 +221,8 @@ show collections
 - `JWT_SECRET`: Secret key for JWT token generation
 - `OPENAI_API_KEY`: OpenAI API key for AI features
 - `APP_CORS_ALLOWED_ORIGINS`: Allowed CORS origins
+- `LOGS_BASIC_USERNAME`: Username for Basic auth on `/logs` endpoints
+- `LOGS_BASIC_PASSWORD`: Password for Basic auth on `/logs` endpoints
 
 #### Admin Panel Configuration
 - `API_BASE_URL`: Base URL of the API backend
