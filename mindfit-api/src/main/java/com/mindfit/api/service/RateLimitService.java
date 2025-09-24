@@ -61,16 +61,16 @@ public class RateLimitService {
     }
 
     private Bucket newMealRecommendationBucket(String key) {
-        // Allow 15 meal recommendation generations per hour per user
-        Bandwidth limit = Bandwidth.classic(15, Refill.intervally(15, Duration.ofHours(1)));
+        // Allow 20 meal recommendation generations per hour per user
+        Bandwidth limit = Bandwidth.classic(20, Refill.intervally(15, Duration.ofHours(1)));
         return Bucket.builder()
                 .addLimit(limit)
                 .build();
     }
 
     private Bucket newWorkoutRecommendationBucket(String key) {
-        // Allow 15 workout recommendation generations per hour per user
-        Bandwidth limit = Bandwidth.classic(15, Refill.intervally(15, Duration.ofHours(1)));
+        // Allow 20 workout recommendation generations per hour per user
+        Bandwidth limit = Bandwidth.classic(20, Refill.intervally(15, Duration.ofHours(1)));
         return Bucket.builder()
                 .addLimit(limit)
                 .build();

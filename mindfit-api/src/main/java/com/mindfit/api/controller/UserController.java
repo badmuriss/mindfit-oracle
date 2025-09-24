@@ -6,7 +6,6 @@ import com.mindfit.api.service.ChatbotService;
 import com.mindfit.api.service.RateLimitService;
 import com.mindfit.api.service.RecommendationService;
 import com.mindfit.api.mapper.UserMapper;
-import com.mindfit.api.common.exception.BadRequestException;
 import com.mindfit.api.common.exception.RateLimitExceededException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -67,7 +66,11 @@ public class UserController {
 
         // Rate limiting: 5 profile generations per hour per user
         if (!rateLimitService.createBucketForProfileGeneration(id).tryConsume(1)) {
-            throw new BadRequestException("Rate limit exceeded. Please try again later.");
+            throw new RateLimitExceededException(
+                "Rate limit exceeded for user " + id,
+                "Limite de solicitações excedido. Você pode gerar até 5 vezes o perfil por hora. Tente novamente mais tarde.",
+                3600 // 1 hour in seconds
+            );
         }
 
         String profile = chatbotService.generateUserProfile(id, request.observations());
@@ -96,7 +99,7 @@ public class UserController {
         if (!rateLimitService.createBucketForMealRecommendations(id).tryConsume(1)) {
             throw new RateLimitExceededException(
                 "Rate limit exceeded for user " + id,
-                "Limite de solicitações excedido. Você pode gerar até 15 novas recomendações de refeição por hora. Tente novamente mais tarde.",
+                "Limite de solicitações excedido. Você pode gerar até 20 novas recomendações de refeição por hora. Tente novamente mais tarde.",
                 3600 // 1 hour in seconds
             );
         }
@@ -114,7 +117,7 @@ public class UserController {
         if (!rateLimitService.createBucketForWorkoutRecommendations(id).tryConsume(1)) {
             throw new RateLimitExceededException(
                 "Rate limit exceeded for user " + id,
-                "Limite de solicitações excedido. Você pode gerar até 15 novas recomendações de treino por hora. Tente novamente mais tarde.",
+                "Limite de solicitações excedido. Você pode gerar até 20 novas recomendações de treino por hora. Tente novamente mais tarde.",
                 3600 // 1 hour in seconds
             );
         }
