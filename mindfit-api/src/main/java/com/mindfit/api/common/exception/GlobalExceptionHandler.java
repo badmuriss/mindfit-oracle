@@ -184,20 +184,37 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(error);
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceededException(
+            RateLimitExceededException ex, HttpServletRequest request) {
+        logService.logError("RATE_LIMIT_EXCEEDED", ex.getClass().getSimpleName(), ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.of(
+                ex.getUserFriendlyMessage(),
+                "RATE_LIMIT_EXCEEDED",
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(
             Exception ex, HttpServletRequest request) {
         // Log to database with full stack trace
-        logService.logError("APPLICATION_ERROR", ex.getClass().getSimpleName(), 
+        logService.logError("APPLICATION_ERROR", ex.getClass().getSimpleName(),
                            getStackTraceAsString(ex));
-        
+
         ErrorResponse error = ErrorResponse.of(
                 "An unexpected error occurred",
                 "INTERNAL_SERVER_ERROR",
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 request.getRequestURI()
         );
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
     

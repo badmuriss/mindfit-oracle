@@ -7,6 +7,7 @@ import com.mindfit.api.service.RateLimitService;
 import com.mindfit.api.service.RecommendationService;
 import com.mindfit.api.mapper.UserMapper;
 import com.mindfit.api.common.exception.BadRequestException;
+import com.mindfit.api.common.exception.RateLimitExceededException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -83,5 +84,41 @@ public class UserController {
     @Operation(summary = "Get cached workout recommendations or generate new ones if cache is expired")
     public WorkoutRecommendationResponse getWorkoutRecommendations(@PathVariable String id) {
         return recommendationService.getCachedWorkoutRecommendations(id);
+    }
+
+    @PostMapping("/{id}/meal-recommendations/generate")
+    @Operation(summary = "Generate new meal recommendations different from current ones")
+    public MealRecommendationResponse generateNewMealRecommendations(
+            @PathVariable String id,
+            @RequestBody(required = false) MealRecommendationRequest request) {
+
+        // Rate limiting: 15 meal recommendation generations per hour per user
+        if (!rateLimitService.createBucketForMealRecommendations(id).tryConsume(1)) {
+            throw new RateLimitExceededException(
+                "Rate limit exceeded for user " + id,
+                "Limite de solicitações excedido. Você pode gerar até 15 novas recomendações de refeição por hora. Tente novamente mais tarde.",
+                3600 // 1 hour in seconds
+            );
+        }
+
+        return recommendationService.generateNewMealRecommendations(id, request);
+    }
+
+    @PostMapping("/{id}/workout-recommendations/generate")
+    @Operation(summary = "Generate new workout recommendations different from current ones")
+    public WorkoutRecommendationResponse generateNewWorkoutRecommendations(
+            @PathVariable String id,
+            @RequestBody(required = false) WorkoutRecommendationRequest request) {
+
+        // Rate limiting: 15 workout recommendation generations per hour per user
+        if (!rateLimitService.createBucketForWorkoutRecommendations(id).tryConsume(1)) {
+            throw new RateLimitExceededException(
+                "Rate limit exceeded for user " + id,
+                "Limite de solicitações excedido. Você pode gerar até 15 novas recomendações de treino por hora. Tente novamente mais tarde.",
+                3600 // 1 hour in seconds
+            );
+        }
+
+        return recommendationService.generateNewWorkoutRecommendations(id, request);
     }
 }

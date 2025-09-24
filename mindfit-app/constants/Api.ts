@@ -54,5 +54,7 @@ export const API_ENDPOINTS = {
     RECOMMEND_WORKOUT: (userId: string) => `${baseUrl}/users/${userId}/recommend-workout`,
     MEAL_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/meal-recommendations`,
     WORKOUT_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/workout-recommendations`,
+    GENERATE_NEW_MEAL_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/meal-recommendations/generate`,
+    GENERATE_NEW_WORKOUT_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/workout-recommendations/generate`,
   },
 };

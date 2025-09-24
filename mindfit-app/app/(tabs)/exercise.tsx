@@ -16,7 +16,7 @@ import {
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
-import { nowAsLocalTime, formatUTCToLocalDateTime } from '../../utils/dateUtils';
+import { nowAsLocalTime, formatUTCToLocalDateTime, nowUTC, localTimeAsUTC } from '../../utils/dateUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -68,6 +68,9 @@ export default function ExploreScreen() {
   const [customDuration, setCustomDuration] = useState('');
   const [customCalories, setCustomCalories] = useState('');
   const [customNotes, setCustomNotes] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [timestamp, setTimestamp] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [customExercises, setCustomExercises] = useState<any[]>([]);
   const [exName, setExName] = useState('');
   const [exSets, setExSets] = useState('');
@@ -298,6 +301,11 @@ export default function ExploreScreen() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After') || '3600';
+          const hours = Math.ceil(parseInt(retryAfter) / 3600);
+          throw new Error(`RATE_LIMIT:Você atingiu o limite de gerações. Tente novamente em ${hours} hora${hours > 1 ? 's' : ''}.`);
+        }
         const errorText = await response.text();
         throw new Error(`Failed to get workout recommendations: ${response.status} - ${errorText}`);
       }
@@ -326,77 +334,108 @@ export default function ExploreScreen() {
       setRecommendedWorkouts(convertedWorkouts);
     } catch (error) {
       console.error('Error loading recommended workouts:', error);
+      const errorMessage = (error as Error)?.message;
+      if (errorMessage?.startsWith('RATE_LIMIT:')) {
+        showMessage({
+          message: errorMessage.replace('RATE_LIMIT:', ''),
+          type: 'warning',
+          duration: 5000
+        });
+      }
     } finally {
       setLoadingRecommended(false);
     }
   }, [token, userId]);
 
+  // Generate new workout recommendations different from current ones
+  const generateNewWorkoutRecommendations = useCallback(async () => {
+    if (!token || !userId) return;
 
-
-  // Save a recommended workout to user's collection
-  const saveRecommendedWorkout = useCallback(async (workout: Workout) => {
-    if (!token || !userId) {
-      showMessage({ message: 'Usuário não autenticado.', type: 'danger' });
-      return;
-    }
+    setLoadingRecommended(true);
 
     try {
-      const payload: any = {
-        name: workout.name,
-        timestamp: nowAsLocalTime(),        
-        durationInMinutes: workout.durationMinutes,
-        description: workout.description,
+      // Send current recommendations to generate different ones
+      const requestBody = {
+        currentRecommendations: recommendedWorkouts.map(rec => ({
+          name: rec.name,
+          description: rec.description,
+          durationMinutes: rec.durationMinutes,
+          estimatedCaloriesBurn: rec.caloriesBurnt,
+          difficulty: rec.difficulty,
+          exercises: rec.exercises?.map(ex => ({
+            name: ex.name,
+            sets: ex.sets,
+            reps: ex.reps,
+            durationSeconds: ex.durationSeconds,
+            instructions: ex.notes
+          }))
+        }))
       };
 
-      // Include calories for recommended workout
-      if (typeof workout.caloriesBurnt === 'number') {
-        payload.caloriesBurnt = Math.round(workout.caloriesBurnt);
-      }
-
-      // Include exercises if available
-      if (workout.exercises && workout.exercises.length > 0) {
-        payload.exercises = workout.exercises;
-      }
-
-      const response = await fetch(API_ENDPOINTS.USERS.EXERCISES(userId), {
+      const response = await fetch(API_ENDPOINTS.USERS.GENERATE_NEW_WORKOUT_RECOMMENDATIONS(userId), {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestBody)
       });
 
-      if (response.ok) {
-        const respJson = await response.json().catch(() => null);
-        const created = normalizeWorkout(respJson ?? { ...payload, id: respJson?.id ?? Date.now() });
+      if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After') || '3600';
+          const hours = Math.ceil(parseInt(retryAfter) / 3600);
+          throw new Error(`RATE_LIMIT:Você atingiu o limite de gerações. Tente novamente em ${hours} hora${hours > 1 ? 's' : ''}.`);
+        }
+        const errorText = await response.text();
+        throw new Error(`Failed to generate new workout recommendations: ${response.status} - ${errorText}`);
+      }
 
-        // Add to user's workouts
-        setWorkouts((prev) => {
-          const updated = [created, ...(prev || [])];
-          // Remove duplicates based on workout name
-          return updated.filter((w, index, self) =>
-            index === self.findIndex(w2 => w2.name.toLowerCase().trim() === w.name.toLowerCase().trim())
-          );
-        });
+      const data = await response.json();
+      const recommendations = data.recommendations || [];
 
-        // Switch to "Meus Treinos" section and show success message
-        setCurrentSection('my');
+      // Convert recommendation format to workout format
+      const convertedWorkouts: Workout[] = recommendations.map((rec: any, index: number) => ({
+        id: `rec-${index}`,
+        name: rec.name,
+        description: rec.description,
+        durationMinutes: rec.durationMinutes,
+        caloriesBurnt: rec.estimatedCaloriesBurn,
+        difficulty: rec.difficulty,
+        exercises: rec.exercises ? rec.exercises.map((ex: any, exIndex: number) => ({
+          id: `rec-ex-${index}-${exIndex}`,
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          durationSeconds: ex.durationSeconds,
+          notes: ex.instructions
+        })) : []
+      }));
+
+      setRecommendedWorkouts(convertedWorkouts);
+      showMessage({
+        message: 'Novos treinos recomendados gerados!',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Error generating new workout recommendations:', error);
+      const errorMessage = (error as Error)?.message;
+      if (errorMessage?.startsWith('RATE_LIMIT:')) {
         showMessage({
-          message: `Treino '${workout.name}' salvo com sucesso!`,
-          type: 'success'
+          message: errorMessage.replace('RATE_LIMIT:', ''),
+          type: 'warning',
+          duration: 5000
         });
       } else {
-        throw new Error(`Failed to save workout: ${response.status}`);
+        showMessage({
+          message: 'Erro ao gerar novos treinos. Tente novamente.',
+          type: 'danger'
+        });
       }
-    } catch (error) {
-      console.error('Error saving recommended workout:', error);
-      showMessage({
-        message: 'Erro ao salvar treino. Tente novamente.',
-        type: 'danger'
-      });
+    } finally {
+      setLoadingRecommended(false);
     }
-  }, [token, userId, normalizeWorkout]);
+  }, [token, userId, recommendedWorkouts]);
 
   const startWorkout = async (w: Workout) => {
     if (!token || !userId) {
@@ -458,9 +497,11 @@ export default function ExploreScreen() {
     }
     setStarting(true);
     try {
+      // Convert local time to UTC time before sending to API
+      const utcTimestamp = localTimeAsUTC(timestamp);
       const payload: any = {
         name: customName.trim(),
-        timestamp: nowAsLocalTime(),
+        timestamp: utcTimestamp,
         durationInMinutes: parseInt(customDuration, 10) || 20,
       };
       if (customNotes) payload.description = customNotes;
@@ -542,10 +583,12 @@ export default function ExploreScreen() {
       setCustomDuration('20');
       setCustomNotes('');
       setCustomCalories('');
+      setShowTimePicker(false);
     } catch {
       showMessage({ message: 'Erro ao criar treino.', type: 'danger' });
     } finally {
       setStarting(false);
+      loadHistory(selectedHistoryDate);
     }
   };
 
@@ -557,6 +600,19 @@ export default function ExploreScreen() {
     setCustomNotes(w.description ?? '');
     setCustomCalories(w.caloriesBurnt && !w.caloriesEstimated ? String(Math.round(w.caloriesBurnt)) : '');
     setCustomExercises(w.exercises ? w.exercises.map((ex: any) => ({ ...ex })) : []);
+
+    // Set the workout date/time or current date/time if not available
+    if (w.timestamp) {
+      const workoutDate = new Date(w.timestamp);
+      setSelectedDate(workoutDate);
+      setTimestamp(w.timestamp);
+    } else {
+      const now = new Date();
+      setSelectedDate(now);
+      setTimestamp(now.toISOString());
+    }
+    setShowTimePicker(false);
+
     setModalVisible(true);
   };
 
@@ -624,6 +680,7 @@ export default function ExploreScreen() {
         });
         showMessage({ message: `Treino '${w.name}' adicionado localmente (sem conexão)`, type: 'warning' });
       }
+    setCurrentTab('history');
     })();
   };
 
@@ -638,9 +695,26 @@ export default function ExploreScreen() {
     <View style={styles.screen}>
       <View style={styles.header}>
         <Text style={styles.title}>Treinos</Text>
-        <TouchableOpacity 
-          style={styles.headerBtn} 
-          onPress={() => { setIsEditing(false); setModalVisible(true); }}
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => {
+            setIsEditing(false);
+            setEditingId(null);
+            setCustomName('');
+            setCustomDuration('20');
+            setCustomCalories('');
+            setCustomNotes('');
+            setCustomExercises([]);
+            setExName(''); setExSets(''); setExReps(''); setExDuration('');
+
+            // Set current date and time
+            const now = new Date();
+            setSelectedDate(now);
+            setTimestamp(now.toISOString());
+            setShowTimePicker(false);
+
+            setModalVisible(true);
+          }}
         >
           <MaterialCommunityIcons name="plus" size={20} color="#fff" />
           <Text style={styles.headerBtnText}>Novo Treino</Text>
@@ -854,6 +928,18 @@ export default function ExploreScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Generate New Recommendations Button for Recommended Section */}
+          {currentSection === 'recommended' && recommendedWorkouts.length > 0 && !loadingRecommended && (
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={generateNewWorkoutRecommendations}
+              disabled={loadingRecommended}
+            >
+              <MaterialCommunityIcons name="refresh" size={20} color="#0ea5e9" />
+              <Text style={styles.refreshButtonText}>Gerar Novos Treinos</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Section Content */}
           {currentSection === 'my' ? (
             // Meus Treinos section
@@ -1035,13 +1121,6 @@ export default function ExploreScreen() {
                           <Text style={styles.actionBtnText}>Iniciar Treino</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.actionBtn, styles.saveBtnRecommended]}
-                          onPress={() => saveRecommendedWorkout(item)}
-                        >
-                          <MaterialCommunityIcons name="content-save" size={16} color="#fff" />
-                          <Text style={styles.actionBtnText}>Salvar Treino</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
                           style={[styles.actionBtn, styles.deleteBtn]}
                           onPress={() => openEdit(item)}
                         >
@@ -1096,13 +1175,118 @@ export default function ExploreScreen() {
           >
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Treino personalizado</Text>
-              <TextInput 
-                placeholder="Nome do treino" 
-                value={customName} 
-                onChangeText={setCustomName} 
+              <TextInput
+                placeholder="Nome do treino"
+                value={customName}
+                onChangeText={setCustomName}
                 style={styles.input}
                 placeholderTextColor="#94a3b8"
               />
+
+              <Text style={{
+                fontWeight: '800',
+                marginBottom: 8,
+                fontSize: 14,
+                color: '#475569',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                marginTop: 16,
+              }}>
+                Data
+              </Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled, { marginBottom: 16 }]}
+                value={selectedDate.toLocaleDateString('pt-BR')}
+                editable={false}
+                placeholder="DD/MM/AAAA"
+                placeholderTextColor="#94a3b8"
+              />
+
+              <Text style={{
+                fontWeight: '800',
+                marginBottom: 8,
+                fontSize: 14,
+                color: '#475569',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>
+                Hora
+              </Text>
+              <View style={styles.timePickerContainer}>
+                <TouchableOpacity
+                  style={styles.timeDisplay}
+                  onPress={() => setShowTimePicker(!showTimePicker)}
+                >
+                  <MaterialCommunityIcons name="clock" size={20} color="#22c55e" style={{ marginRight: 8 }} />
+                  <Text style={styles.timeDisplayText}>
+                    {new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name={showTimePicker ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#22c55e"
+                    style={{ marginLeft: 8 }}
+                  />
+                </TouchableOpacity>
+
+                {showTimePicker && (
+                  <View style={styles.timePickerRow}>
+                    <View style={styles.timePicker}>
+                      <Text style={styles.timeLabel}>Horas</Text>
+                      <View style={styles.hourGrid}>
+                        {Array.from({ length: 24 }, (_, i) => (
+                          <TouchableOpacity
+                            key={i}
+                            style={[
+                              styles.hourButton,
+                              new Date(timestamp).getHours() === i && styles.hourButtonActive
+                            ]}
+                            onPress={() => {
+                              const currentDate = new Date(timestamp);
+                              currentDate.setHours(i);
+                              setTimestamp(currentDate.toISOString());
+                            }}
+                          >
+                            <Text style={[
+                              styles.hourButtonText,
+                              new Date(timestamp).getHours() === i && styles.hourButtonTextActive
+                            ]}>
+                              {String(i).padStart(2, '0')}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.timePicker}>
+                      <Text style={styles.timeLabel}>Minutos</Text>
+                      <View style={styles.minuteGrid}>
+                        {Array.from({ length: 12 }, (_, i) => i * 5).map(minute => (
+                          <TouchableOpacity
+                            key={minute}
+                            style={[
+                              styles.minuteButton,
+                              Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonActive
+                            ]}
+                            onPress={() => {
+                              const currentDate = new Date(timestamp);
+                              currentDate.setMinutes(minute);
+                              setTimestamp(currentDate.toISOString());
+                            }}
+                          >
+                            <Text style={[
+                              styles.minuteButtonText,
+                              Math.floor(new Date(timestamp).getMinutes() / 5) * 5 === minute && styles.minuteButtonTextActive
+                            ]}>
+                              {String(minute).padStart(2, '0')}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
               <View style={{ 
                 flexDirection: screenWidth <= 400 ? 'column' : 'row', 
                 gap: screenWidth <= 400 ? 0 : 12,
@@ -1251,7 +1435,8 @@ export default function ExploreScreen() {
                   backgroundColor: '#f8fafc',
                   borderRadius: 12,
                   padding: 12,
-                  marginBottom: 16,
+                  marginBottom: 80,
+                  marginTop: 10
                 }}>
                   {customExercises.map((ex, idx) => (
                     <View key={String(ex.id ?? idx)} style={{ 
@@ -1890,6 +2075,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
+    minWidth: 120,
     minHeight: 52,
   },
   modalCancelBtnText: {
@@ -1913,7 +2099,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowRadius: 12,
     elevation: 6,
-    minHeight: 52,
+    minWidth: 120,
+    minHeight: 32,
   },
   modalSaveBtnText: {
     color: '#ffffff',
@@ -2026,6 +2213,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 8,
+    marginBottom: 16,
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   refreshButtonText: {
     fontSize: 14,
@@ -2080,5 +2273,106 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748b',
     marginTop: 2,
+  },
+  // Time Picker styles
+  timePickerContainer: {
+    marginBottom: 16,
+  },
+  timeDisplay: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#22c55e',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  timeDisplayText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#22c55e',
+    letterSpacing: 2,
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  timePicker: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  hourGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    justifyContent: 'center',
+  },
+  hourButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  hourButtonActive: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  hourButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  hourButtonTextActive: {
+    color: '#ffffff',
+  },
+  minuteGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  minuteButton: {
+    width: 42,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  minuteButtonActive: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  minuteButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  minuteButtonTextActive: {
+    color: '#ffffff',
+  },
+  inputDisabled: {
+    opacity: 0.6,
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
   },
 });

@@ -58,13 +58,16 @@ export default function NutritionScreen() {
   // Meal recommendations state
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [recommendations, setRecommendations] = useState<any[]>([]);
-  
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
   
 
 
   const loadMeals = useCallback(async (date: Date) => {
-    if (!token || !userId) return;
+    if (!token || !userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const startDate = new Date(date);
@@ -120,6 +123,7 @@ export default function NutritionScreen() {
   const getMealRecommendations = useCallback(async () => {
     if (!token || !userId) return;
 
+    setLoadingRecommendations(true);
     setRecommendationError(null);
 
     try {
@@ -132,8 +136,25 @@ export default function NutritionScreen() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After') || '3600';
+          const hours = Math.ceil(parseInt(retryAfter) / 3600);
+          throw new Error(`RATE_LIMIT:Limite de recomendações atingido. Tente novamente em ${hours} hora${hours > 1 ? 's' : ''}.`);
+        }
+
         const errorText = await response.text();
-        throw new Error(`Failed to get recommendations: ${response.status} - ${errorText}`);
+        let errorMessage = 'Erro ao buscar sugestões de refeições';
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.message) {
+            errorMessage = errorJson.message;
+          }
+        } catch (e) {
+          // Use default error message if JSON parsing fails
+        }
+
+        throw new Error(`GENERAL:${errorMessage}`);
       }
 
       const data = await response.json();
@@ -141,14 +162,110 @@ export default function NutritionScreen() {
       setShowRecommendations(true);
     } catch (error) {
       console.error('Error getting meal recommendations:', error);
-      setRecommendationError('Failed to get meal recommendations. Please try again.');
-      showMessage({
-        message: 'Erro ao buscar sugestões de refeições',
-        type: 'danger'
-      });
+
+      const errorMessage = (error as Error).message || 'Unknown error';
+      if (errorMessage.startsWith('RATE_LIMIT:')) {
+        const message = errorMessage.substring(11);
+        setRecommendationError(message);
+        showMessage({
+          message: message,
+          type: 'warning'
+        });
+      } else {
+        const message = errorMessage.startsWith('GENERAL:') ? errorMessage.substring(8) : 'Erro ao buscar sugestões de refeições';
+        setRecommendationError(message);
+        showMessage({
+          message: message,
+          type: 'danger'
+        });
+      }
     } finally {
+      setLoadingRecommendations(false);
     }
   }, [token, userId]);
+
+  // Generate new meal recommendations different from current ones
+  const generateNewMealRecommendations = useCallback(async () => {
+    if (!token || !userId) return;
+
+    setLoadingRecommendations(true);
+    setRecommendationError(null);
+
+    try {
+      // Send current recommendations to generate different ones
+      const requestBody = {
+        currentRecommendations: recommendations.map(rec => ({
+          name: rec.name,
+          description: rec.description,
+          estimatedCalories: rec.estimatedCalories,
+          estimatedCarbs: rec.estimatedCarbs,
+          estimatedProtein: rec.estimatedProtein,
+          estimatedFat: rec.estimatedFat
+        }))
+      };
+
+      const response = await fetch(API_ENDPOINTS.USERS.GENERATE_NEW_MEAL_RECOMMENDATIONS(userId), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          // Rate limit exceeded
+          const retryAfter = response.headers.get('Retry-After') || '3600';
+          const hours = Math.ceil(parseInt(retryAfter) / 3600);
+          throw new Error(`RATE_LIMIT:Você atingiu o limite de gerações. Tente novamente em ${hours} hora${hours > 1 ? 's' : ''}.`);
+        }
+
+        const errorText = await response.text();
+        let errorMessage = 'Erro ao gerar novas recomendações.';
+
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.message) {
+            errorMessage = errorJson.message;
+          }
+        } catch (e) {
+          // Use default error message if JSON parsing fails
+        }
+
+        throw new Error(`GENERAL:${errorMessage}`);
+      }
+
+      const data = await response.json();
+      setRecommendations(data.recommendations || []);
+      setShowRecommendations(true);
+      showMessage({
+        message: 'Novas sugestões de refeições geradas!',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Error generating new meal recommendations:', error);
+
+      const errorMessage = (error as Error).message || 'Unknown error';
+      if (errorMessage.startsWith('RATE_LIMIT:')) {
+        const message = errorMessage.substring(11); // Remove 'RATE_LIMIT:' prefix
+        setRecommendationError(message);
+        showMessage({
+          message: message,
+          type: 'warning'
+        });
+      } else {
+        const message = errorMessage.startsWith('GENERAL:') ? errorMessage.substring(8) : 'Erro ao gerar novas sugestões. Tente novamente.';
+        setRecommendationError(message);
+        showMessage({
+          message: message,
+          type: 'danger'
+        });
+      }
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  }, [token, userId, recommendations]);
 
 
 
@@ -574,48 +691,31 @@ export default function NutritionScreen() {
 
                   {/* AI Meal Suggestions */}
                   <View style={styles.suggestionSection}>
-                    <Text style={styles.label}>Sugestões de IA</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={styles.label}>Sugestões Geradas por IA para vocẽ</Text>
+                      {showRecommendations && recommendations.length > 0 && !loadingRecommendations && (
+                        <TouchableOpacity
+                          style={styles.refreshButton}
+                          onPress={generateNewMealRecommendations}
+                          disabled={loadingRecommendations}
+                        >
+                          <MaterialCommunityIcons name="refresh" size={16} color="#0ea5e9" />
+                          <Text style={styles.refreshButtonText}>Gerar Novas</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
 
-                    {/* Load Cached Recommendations Button
-                    {!showRecommendations && (
-                      <TouchableOpacity
-                        style={styles.suggestionButton}
-                        onPress={getMealRecommendations}
-                        disabled={loadingRecommendations}
-                      >
-                        {loadingRecommendations ? (
-                          <ActivityIndicator size="small" color="#22c55e" />
-                        ) : (
-                          <MaterialCommunityIcons name="robot" size={20} color="#22c55e" />
-                        )}
-                        <Text style={styles.suggestionButtonText}>
-                          {loadingRecommendations ? 'Carregando sugestões...' : 'Ver sugestões de refeições'}
-                        </Text>
-                      </TouchableOpacity>
+                    {/* Loading state for recommendations */}
+                    {loadingRecommendations && (
+                      <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="small" color="#22c55e" />
+                        <Text style={styles.loadingText}>Carregando sugestões de IA...</Text>
+                      </View>
                     )}
 
-                    Refresh Recommendations Button
-                    {showRecommendations && (
-                      <TouchableOpacity
-                        style={[styles.suggestionButton, { backgroundColor: '#f0f9ff', borderColor: '#0ea5e9' }]}
-                        onPress={refreshMealRecommendations}
-                        disabled={loadingRecommendations}
-                      >
-                        {loadingRecommendations ? (
-                          <ActivityIndicator size="small" color="#0ea5e9" />
-                        ) : (
-                          <MaterialCommunityIcons name="refresh" size={20} color="#0ea5e9" />
-                        )}
-                        <Text style={[styles.suggestionButtonText, { color: '#0ea5e9' }]}>
-                          {loadingRecommendations ? 'Atualizando...' : 'Gerar novas sugestões'}
-                        </Text>
-                      </TouchableOpacity>
-                    )} */}
-
                     {/* Recommendation Results */}
-                    {showRecommendations && recommendations.length > 0 && (
+                    {!loadingRecommendations && showRecommendations && recommendations.length > 0 && (
                       <View style={styles.recommendationsContainer}>
-                        <Text style={styles.recommendationsTitle}>Sugestões para você:</Text>
                         {recommendations.map((rec, index) => (
                           <TouchableOpacity
                             key={index}
@@ -642,7 +742,7 @@ export default function NutritionScreen() {
                       </View>
                     )}
 
-                    {recommendationError && (
+                    {!loadingRecommendations && recommendationError && (
                       <View style={styles.errorContainer}>
                         <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
                         <Text style={styles.errorText}>{recommendationError}</Text>
@@ -1573,5 +1673,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#0ea5e9',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  refreshButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0ea5e9',
+    letterSpacing: 0.25,
   },
 });

@@ -14,6 +14,8 @@ public class RateLimitService {
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Bucket> profileGenerationBuckets = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Bucket> recommendationBuckets = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Bucket> mealRecommendationBuckets = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Bucket> workoutRecommendationBuckets = new ConcurrentHashMap<>();
 
     public Bucket createBucketForUser(String userId) {
         return buckets.computeIfAbsent(userId, this::newBucket);
@@ -25,6 +27,14 @@ public class RateLimitService {
 
     public Bucket createBucketForRecommendations(String userId) {
         return recommendationBuckets.computeIfAbsent(userId + "_recommendations", this::newRecommendationBucket);
+    }
+
+    public Bucket createBucketForMealRecommendations(String userId) {
+        return mealRecommendationBuckets.computeIfAbsent(userId + "_meal_recommendations", this::newMealRecommendationBucket);
+    }
+
+    public Bucket createBucketForWorkoutRecommendations(String userId) {
+        return workoutRecommendationBuckets.computeIfAbsent(userId + "_workout_recommendations", this::newWorkoutRecommendationBucket);
     }
 
     private Bucket newBucket(String userId) {
@@ -45,6 +55,22 @@ public class RateLimitService {
     private Bucket newRecommendationBucket(String key) {
         // Allow 20 recommendations per hour per user
         Bandwidth limit = Bandwidth.classic(20, Refill.intervally(20, Duration.ofHours(1)));
+        return Bucket.builder()
+                .addLimit(limit)
+                .build();
+    }
+
+    private Bucket newMealRecommendationBucket(String key) {
+        // Allow 15 meal recommendation generations per hour per user
+        Bandwidth limit = Bandwidth.classic(15, Refill.intervally(15, Duration.ofHours(1)));
+        return Bucket.builder()
+                .addLimit(limit)
+                .build();
+    }
+
+    private Bucket newWorkoutRecommendationBucket(String key) {
+        // Allow 15 workout recommendation generations per hour per user
+        Bandwidth limit = Bandwidth.classic(15, Refill.intervally(15, Duration.ofHours(1)));
         return Bucket.builder()
                 .addLimit(limit)
                 .build();

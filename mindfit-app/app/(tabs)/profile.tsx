@@ -9,6 +9,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { userName, userEmail, userId, token, setUserName, logout } = useUser();
+  const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [tempName, setTempName] = useState(userName || '');
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,7 @@ export default function ProfileScreen() {
         return;
       }
 
+      setLoading(true);
       try {
         const response = await fetch(API_ENDPOINTS.USERS.PROFILE(userId), {
           headers: {
@@ -49,7 +51,7 @@ export default function ProfileScreen() {
           setUserProfile(profileData);
         }
       } catch (error) {
-        // Silent error handling
+        console.error('Error fetching user profile:', error);
       } finally {
         setLoading(false);
       }
@@ -319,6 +321,22 @@ export default function ProfileScreen() {
       showMessage({ message: 'Erro ao fazer logout.', type: 'danger' });
     }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#22c55e" />
+        <Text style={{
+          color: '#64748b',
+          marginTop: 16,
+          fontSize: 16,
+          fontWeight: '600',
+        }}>
+          Carregando perfil...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView
