@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -17,7 +16,7 @@ import {
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
-import { nowUTC, formatUTCToLocalDateTime } from '../../utils/dateUtils';
+import { nowAsLocalTime, formatUTCToLocalDateTime } from '../../utils/dateUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -54,47 +53,6 @@ function estimateCalories(durationMinutes: number, difficulty?: string, weight?:
   return met * w * durationHours;
 }
 
-const FALLBACK_WORKOUTS: Workout[] = [
-  {
-    id: 'w1',
-    name: 'Full Body Express',
-    durationMinutes: 20,
-    difficulty: 'Easy',
-    caloriesBurnt: 180,
-    description: 'Treino rápido para todo corpo, foco em força e condicionamento.',
-    exercises: [
-      { id: 'e1', name: 'Agachamento livre', sets: 3, reps: 12 },
-      { id: 'e2', name: 'Flexão de braço', sets: 3, reps: 10 },
-      { id: 'e3', name: 'Prancha', durationSeconds: 45 },
-    ],
-  },
-  {
-    id: 'w2',
-    name: 'HIIT Intenso',
-    durationMinutes: 30,
-    difficulty: 'Hard',
-    caloriesBurnt: 350,
-    description: 'Intervalos de alta intensidade para queima de gordura.',
-    exercises: [
-      { id: 'e4', name: 'Sprints (30s)', durationSeconds: 30, reps: '6 rounds' },
-      { id: 'e5', name: 'Burpees', sets: 4, reps: 12 },
-      { id: 'e6', name: 'Mountain Climbers', sets: 4, durationSeconds: 40 },
-    ],
-  },
-  {
-    id: 'w3',
-    name: 'Core & Mobility',
-    durationMinutes: 25,
-    difficulty: 'Medium',
-    caloriesBurnt: 160,
-    description: 'Fortalece o core e melhora mobilidade articular.',
-    exercises: [
-      { id: 'e7', name: 'Russian Twist', sets: 3, reps: 20 },
-      { id: 'e8', name: 'Alongamento do quadril', durationSeconds: 60 },
-      { id: 'e9', name: 'Superman', sets: 3, reps: 12 },
-    ],
-  },
-];
 
 const PRESET_MOVEMENTS: string[] = ['Abdominais', 'Prancha', 'Polia', 'Rosca', 'Agachamento', 'Flexão'];
 
@@ -103,7 +61,6 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [recommendedWorkouts, setRecommendedWorkouts] = useState<Workout[]>([...FALLBACK_WORKOUTS]);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
@@ -119,15 +76,24 @@ export default function ExploreScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [weightKg, setWeightKg] = useState<number | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  
   const [historyWorkouts, setHistoryWorkouts] = useState<Workout[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'my-workouts' | 'recommended' | 'history'>('my-workouts');
+  const [currentTab, setCurrentTab] = useState<'treinos' | 'history'>('treinos');
+  const [currentSection, setCurrentSection] = useState<'my' | 'recommended'>('my');
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState(new Date());
+
+  // Recommended workouts state
+  const [recommendedWorkouts, setRecommendedWorkouts] = useState<Workout[]>([]);
+  const [loadingRecommended, setLoadingRecommended] = useState(false);
+  
 
   // Confirmation dialog state for history deletions
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [workoutToDelete, setWorkoutToDelete] = useState<Workout | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+
 
   const normalizeWorkout = useCallback((it: any): Workout => {
     const duration = it.durationInMinutes ?? it.duration ?? 20;
@@ -149,15 +115,33 @@ export default function ExploreScreen() {
     };
   }, [weightKg]);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (date: Date) => {
     if (!token || !userId) return;
     setLoadingHistory(true);
     try {
-      // Load all workout history with larger page size
-      const pageable = encodeURIComponent(JSON.stringify({ page: 0, size: 100 }));
-      const resp = await fetch(API_ENDPOINTS.USERS.EXERCISES(userId, pageable), {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      const toYYYYMMDD = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      const params = new URLSearchParams({
+        startDate: toYYYYMMDD(startDate),
+        endDate: toYYYYMMDD(endDate),
+        page: '0',
+        size: '100',
+      });
+
+      const resp = await fetch(`${API_ENDPOINTS.USERS.EXERCISES(userId)}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!resp.ok) {
         setHistoryWorkouts([]);
         return;
@@ -166,12 +150,18 @@ export default function ExploreScreen() {
       const items = Array.isArray(data) ? data : data.content || [];
       const parsed: Workout[] = items.map((it: any) => normalizeWorkout(it));
       setHistoryWorkouts(parsed);
-    } catch (err) {
+    } catch {
       setHistoryWorkouts([]);
     } finally {
       setLoadingHistory(false);
     }
   }, [token, userId, normalizeWorkout]);
+
+  useEffect(() => {
+    if (currentTab === 'history') {
+      loadHistory(selectedHistoryDate);
+    }
+  }, [selectedHistoryDate, currentTab, loadHistory]);
 
   const handleDeleteHistory = (w: Workout) => {
     setWorkoutToDelete(w);
@@ -211,7 +201,7 @@ export default function ExploreScreen() {
 
       if (resp.status === 404) {
         showMessage({ message: 'Treino não encontrado no servidor.', type: 'danger' });
-        await loadHistory();
+        await loadHistory(selectedHistoryDate);
         setConfirmDeleteVisible(false);
         setWorkoutToDelete(null);
         return;
@@ -224,9 +214,9 @@ export default function ExploreScreen() {
         return;
       }
 
-      const txt = await resp.text();
+      await resp.text();
       showMessage({ message: 'Erro ao remover treino.', type: 'danger' });
-    } catch (err) {
+    } catch {
       showMessage({ message: 'Erro ao remover treino.', type: 'danger' });
     } finally {
       setDeleting(false);
@@ -247,8 +237,8 @@ export default function ExploreScreen() {
       try {
         // try to fetch latest measurement to estimate calories
         try {
-          const mPage = encodeURIComponent(JSON.stringify({ page: 0, size: 1 }));
-          const mResp = await fetch(API_ENDPOINTS.USERS.MEASUREMENTS(userId, mPage), {
+          const mParams = new URLSearchParams({ page: '0', size: '1' });
+          const mResp = await fetch(`${API_ENDPOINTS.USERS.MEASUREMENTS(userId)}?${mParams.toString()}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (mResp.ok) {
@@ -262,8 +252,8 @@ export default function ExploreScreen() {
           // ignore measurement fetch errors
         }
         // API expects pageable param; request first page
-        const pageable = encodeURIComponent(JSON.stringify({ page: 0, size: 20 }));
-        const resp = await fetch(API_ENDPOINTS.USERS.EXERCISES(userId, pageable), {
+        const params = new URLSearchParams({ page: '0', size: '200' });
+        const resp = await fetch(`${API_ENDPOINTS.USERS.EXERCISES(userId)}?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!resp.ok) {
@@ -285,12 +275,127 @@ export default function ExploreScreen() {
         } else {
           setWorkouts([]);
         }
-      } catch (err) {
+      } catch {
       } finally {
         setLoading(false);
       }
     };
     load();
+  }, [token, userId, normalizeWorkout]);
+
+  // Load recommended workouts from cache or generate new ones
+  const loadRecommendedWorkouts = useCallback(async () => {
+    if (!token || !userId) return;
+
+    setLoadingRecommended(true);
+
+    try {
+      const response = await fetch(API_ENDPOINTS.USERS.WORKOUT_RECOMMENDATIONS(userId), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get workout recommendations: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const recommendations = data.recommendations || [];
+
+      // Convert recommendation format to workout format
+      const convertedWorkouts: Workout[] = recommendations.map((rec: any, index: number) => ({
+        id: `rec-${index}`,
+        name: rec.name,
+        description: rec.description,
+        durationMinutes: rec.durationMinutes,
+        caloriesBurnt: rec.estimatedCaloriesBurn,
+        difficulty: rec.difficulty,
+        exercises: rec.exercises ? rec.exercises.map((ex: any, exIndex: number) => ({
+          id: `rec-ex-${index}-${exIndex}`,
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          durationSeconds: ex.durationSeconds,
+          notes: ex.instructions
+        })) : []
+      }));
+
+      setRecommendedWorkouts(convertedWorkouts);
+    } catch (error) {
+      console.error('Error loading recommended workouts:', error);
+    } finally {
+      setLoadingRecommended(false);
+    }
+  }, [token, userId]);
+
+
+
+  // Save a recommended workout to user's collection
+  const saveRecommendedWorkout = useCallback(async (workout: Workout) => {
+    if (!token || !userId) {
+      showMessage({ message: 'Usuário não autenticado.', type: 'danger' });
+      return;
+    }
+
+    try {
+      const payload: any = {
+        name: workout.name,
+        timestamp: nowAsLocalTime(),        
+        durationInMinutes: workout.durationMinutes,
+        description: workout.description,
+      };
+
+      // Include calories for recommended workout
+      if (typeof workout.caloriesBurnt === 'number') {
+        payload.caloriesBurnt = Math.round(workout.caloriesBurnt);
+      }
+
+      // Include exercises if available
+      if (workout.exercises && workout.exercises.length > 0) {
+        payload.exercises = workout.exercises;
+      }
+
+      const response = await fetch(API_ENDPOINTS.USERS.EXERCISES(userId), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const respJson = await response.json().catch(() => null);
+        const created = normalizeWorkout(respJson ?? { ...payload, id: respJson?.id ?? Date.now() });
+
+        // Add to user's workouts
+        setWorkouts((prev) => {
+          const updated = [created, ...(prev || [])];
+          // Remove duplicates based on workout name
+          return updated.filter((w, index, self) =>
+            index === self.findIndex(w2 => w2.name.toLowerCase().trim() === w.name.toLowerCase().trim())
+          );
+        });
+
+        // Switch to "Meus Treinos" section and show success message
+        setCurrentSection('my');
+        showMessage({
+          message: `Treino '${workout.name}' salvo com sucesso!`,
+          type: 'success'
+        });
+      } else {
+        throw new Error(`Failed to save workout: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error saving recommended workout:', error);
+      showMessage({
+        message: 'Erro ao salvar treino. Tente novamente.',
+        type: 'danger'
+      });
+    }
   }, [token, userId, normalizeWorkout]);
 
   const startWorkout = async (w: Workout) => {
@@ -302,7 +407,7 @@ export default function ExploreScreen() {
     try {
       const payload: any = {
         name: w.name,
-        timestamp: nowUTC(),
+        timestamp: nowAsLocalTime(),
       };
       if (w.durationMinutes) payload.durationInMinutes = w.durationMinutes;
       if (w.description) payload.description = w.description;
@@ -320,14 +425,18 @@ export default function ExploreScreen() {
         body: JSON.stringify(payload),
       });
       if (!resp.ok) {
-        const text = await resp.text();
+        await resp.text();
         showMessage({ message: 'Não foi possível iniciar o treino.', type: 'danger' });
         return;
       }
       const respJson = await resp.json().catch(() => null);
       const calories = respJson?.caloriesBurnt ?? w.caloriesBurnt ?? estimateCalories(w.durationMinutes ?? 20, w.difficulty, weightKg);
       showMessage({ message: `Treino '${w.name}' iniciado! (${Math.round(calories)} kcal)`, type: 'success' });
-    } catch (err) {
+
+      // Navigate to history tab after successful workout start
+      setCurrentTab('history');
+      loadHistory(new Date());
+    } catch {
       showMessage({ message: 'Erro ao iniciar treino.', type: 'danger' });
     } finally {
       setStarting(false);
@@ -351,7 +460,7 @@ export default function ExploreScreen() {
     try {
       const payload: any = {
         name: customName.trim(),
-        timestamp: nowUTC(),
+        timestamp: nowAsLocalTime(),
         durationInMinutes: parseInt(customDuration, 10) || 20,
       };
       if (customNotes) payload.description = customNotes;
@@ -397,7 +506,7 @@ export default function ExploreScreen() {
         });
       }
       if (!resp.ok) {
-        const text = await resp.text();
+        await resp.text();
         showMessage({ message: 'Erro ao criar treino personalizado.', type: 'danger' });
         return;
       }
@@ -433,7 +542,7 @@ export default function ExploreScreen() {
       setCustomDuration('20');
       setCustomNotes('');
       setCustomCalories('');
-    } catch (err) {
+    } catch {
       showMessage({ message: 'Erro ao criar treino.', type: 'danger' });
     } finally {
       setStarting(false);
@@ -452,8 +561,8 @@ export default function ExploreScreen() {
   };
 
   const handleUseRecommended = (w: Workout) => {
-    // Switch to my workouts tab and add the workout
-    setCurrentTab('my-workouts');
+    // Switch to my workouts section and add the workout
+    setCurrentSection('my');
     
     (async () => {
       if (!token || !userId) {
@@ -465,7 +574,7 @@ export default function ExploreScreen() {
       try {
         const payload: any = {
           name: w.name,
-          timestamp: nowUTC(),
+          timestamp: nowAsLocalTime(),
           durationInMinutes: w.durationMinutes,
           description: w.description,
         };
@@ -504,7 +613,7 @@ export default function ExploreScreen() {
           });
           showMessage({ message: `Treino '${w.name}' adicionado localmente (erro ao salvar no servidor)`, type: 'warning' });
         }
-      } catch (error) {
+      } catch {
         // If network fails, still add to local workouts
         setWorkouts((prev) => {
           const updated = [{ ...w, id: `local-${Date.now()}` }, ...(prev || [])];
@@ -518,66 +627,7 @@ export default function ExploreScreen() {
     })();
   };
 
-  const renderWorkout = ({ item }: { item: Workout }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <MaterialCommunityIcons name="dumbbell" size={24} color="#22c55e" />
-        <TouchableOpacity onPress={() => { setSelectedWorkout(item); setDetailsModalVisible(true); }}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.cardSubtitle}>{item.description}</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12, gap: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <MaterialCommunityIcons name="clock-outline" size={16} color="#64748b" />
-          <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>{item.durationMinutes ?? 20} min</Text>
-        </View>
-        {typeof item.caloriesBurnt === 'number' && (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <MaterialCommunityIcons name="fire" size={16} color="#f59e0b" />
-            <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>
-              {item.caloriesEstimated ? `est. ${Math.round(item.caloriesBurnt)} kcal` : `${Math.round(item.caloriesBurnt)} kcal`}
-            </Text>
-          </View>
-        )}
-      </View>
-      {item.exercises && item.exercises.length > 0 && (
-        <View style={{ marginBottom: 8 }}>
-          {item.exercises.map((ex) => (
-            <View key={String(ex.id ?? ex.name)} style={styles.exerciseRow}>
-              <Text style={styles.exerciseName}>{ex.name}</Text>
-              <Text style={styles.exerciseMeta}>
-                {ex.sets ? `${ex.sets}x${ex.reps ?? ''}` : ''}
-                {ex.durationSeconds ? `${ex.sets ? ' • ' : ''}${Math.round((ex.durationSeconds ?? 0) / 60)}m` : ''}
-              </Text>
-            </View>
-          ))}
-        </View>
-      )}
-      <View style={styles.cardActions}>
-        <TouchableOpacity 
-          style={[styles.startBtn, { 
-            width: '100%',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: screenWidth <= 400 ? 14 : 16,
-          }]} 
-          onPress={() => startWorkout(item)} 
-          disabled={starting}
-        >
-          {starting ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <MaterialCommunityIcons name="play" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.startBtnText}>Iniciar Treino</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+
 
   const closeDetails = () => {
     setDetailsModalVisible(false);
@@ -597,47 +647,32 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tab Navigation */}
+      {/* Main Tab Navigation */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, currentTab === 'my-workouts' && styles.activeTab]}
-          onPress={() => setCurrentTab('my-workouts')}
+        <TouchableOpacity
+          style={[styles.tab, currentTab === 'treinos' && styles.activeTab]}
+          onPress={() => setCurrentTab('treinos')}
         >
-          <MaterialCommunityIcons 
-            name="dumbbell" 
-            size={20} 
-            color={currentTab === 'my-workouts' ? '#22c55e' : '#64748b'} 
+          <MaterialCommunityIcons
+            name="dumbbell"
+            size={20}
+            color={currentTab === 'treinos' ? '#22c55e' : '#64748b'}
           />
-          <Text style={[styles.tabText, currentTab === 'my-workouts' && styles.activeTabText]}>
+          <Text style={[styles.tabText, currentTab === 'treinos' && styles.activeTabText]}>
             Treinos
           </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, currentTab === 'recommended' && styles.activeTab]}
-          onPress={() => setCurrentTab('recommended')}
-        >
-          <MaterialCommunityIcons 
-            name="star" 
-            size={20} 
-            color={currentTab === 'recommended' ? '#22c55e' : '#64748b'} 
-          />
-          <Text style={[styles.tabText, currentTab === 'recommended' && styles.activeTabText]}>
-            Sugeridos
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.tab, currentTab === 'history' && styles.activeTab]}
           onPress={() => {
             setCurrentTab('history');
-            loadHistory();
           }}
         >
-          <MaterialCommunityIcons 
-            name="history" 
-            size={20} 
-            color={currentTab === 'history' ? '#22c55e' : '#64748b'} 
+          <MaterialCommunityIcons
+            name="history"
+            size={20}
+            color={currentTab === 'history' ? '#22c55e' : '#64748b'}
           />
           <Text style={[styles.tabText, currentTab === 'history' && styles.activeTabText]}>
             Histórico
@@ -648,17 +683,43 @@ export default function ExploreScreen() {
       {currentTab === 'history' ? (
         // History View
         <View style={{ flex: 1 }}>
-          <Text style={{ 
-            fontWeight: '900', 
-            marginBottom: 20,
-            marginTop: 8,
-            fontSize: 18,
-            color: '#0f172a',
-            letterSpacing: -0.25,
-            paddingHorizontal: 4,
-          }}>
-            Histórico de Treinos
-          </Text>
+          {/* Day Navigation */}
+          <View style={styles.dayNavigation}>
+            <TouchableOpacity
+              style={styles.dayNavButton}
+              onPress={() => {
+                const newDate = new Date(selectedHistoryDate);
+                newDate.setDate(newDate.getDate() - 1);
+                setSelectedHistoryDate(newDate);
+              }}
+            >
+              <MaterialCommunityIcons name="chevron-left" size={24} color="#64748b" />
+            </TouchableOpacity>
+
+            <View style={styles.dateDisplay}>
+              <Text style={styles.dateText}>
+                {selectedHistoryDate.toLocaleDateString('pt-BR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long'
+                })}
+              </Text>
+              <Text style={styles.dayText}>
+                {selectedHistoryDate.toLocaleDateString('pt-BR', { year: 'numeric' })}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.dayNavButton}
+              onPress={() => {
+                const newDate = new Date(selectedHistoryDate);
+                newDate.setDate(newDate.getDate() + 1);
+                setSelectedHistoryDate(newDate);
+              }}
+            >
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#64748b" />
+            </TouchableOpacity>
+          </View>
           
           {loadingHistory ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -765,143 +826,260 @@ export default function ExploreScreen() {
             />
           )}
         </View>
-      ) : currentTab === 'recommended' ? (
-        // Recommended workouts view
+      ) : (
+        // Treinos tab content with sections
         <View style={{ flex: 1 }}>
-          <Text style={{ 
-            fontWeight: '900', 
-            marginBottom: 20,
-            marginTop: 8,
-            fontSize: 18,
-            color: '#0f172a',
-            letterSpacing: -0.25,
-            paddingHorizontal: 4,
-          }}>
-            Treinos Recomendados
-          </Text>
-          <FlatList
-            data={recommendedWorkouts}
-            keyExtractor={(w) => String(w.id)}
-            contentContainerStyle={{ paddingBottom: 10 }}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <MaterialCommunityIcons name="star" size={24} color="#22c55e" />
-                  <TouchableOpacity onPress={() => { setSelectedWorkout(item); setDetailsModalVisible(true); }}>
-                    <Text style={styles.cardTitle}>{item.name}</Text>
-                  </TouchableOpacity>
+          {/* Section Navigation */}
+          <View style={styles.sectionTabs}>
+            <TouchableOpacity
+              style={[styles.sectionTab, currentSection === 'my' && styles.activeSectionTab]}
+              onPress={() => setCurrentSection('my')}
+            >
+              <Text style={[styles.sectionTabText, currentSection === 'my' && styles.activeSectionTabText]}>
+                Meus Treinos
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.sectionTab, currentSection === 'recommended' && styles.activeSectionTab]}
+              onPress={() => {
+                setCurrentSection('recommended');
+                if (recommendedWorkouts.length === 0) {
+                  loadRecommendedWorkouts();
+                }
+              }}
+            >
+              <Text style={[styles.sectionTabText, currentSection === 'recommended' && styles.activeSectionTabText]}>
+                Treinos Recomendados
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Section Content */}
+          {currentSection === 'my' ? (
+            // Meus Treinos section
+            <View style={{ flex: 1 }}>
+              {loading ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 }}>
+                  <ActivityIndicator size="large" color="#22c55e" />
+                  <Text style={{
+                    color: '#64748b',
+                    marginTop: 16,
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}>
+                    Carregando treinos...
+                  </Text>
                 </View>
-                <Text style={styles.cardSubtitle}>{item.description}</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12, gap: 16 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color="#64748b" />
-                    <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>{item.durationMinutes ?? 20} min</Text>
-                  </View>
-                  {typeof item.caloriesBurnt === 'number' && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <MaterialCommunityIcons name="fire" size={16} color="#f59e0b" />
-                      <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>
-                        {item.caloriesEstimated ? `est. ${Math.round(item.caloriesBurnt)} kcal` : `${Math.round(item.caloriesBurnt)} kcal`}
-                      </Text>
+              ) : (
+                <FlatList
+                  data={workouts}
+                  keyExtractor={(w, i) => String(w.id ?? i)}
+                  renderItem={({ item }) => (
+                    <View style={styles.card}>
+                      <View style={styles.cardHeader}>
+                        <MaterialCommunityIcons name="dumbbell" size={24} color="#22c55e" />
+                        <TouchableOpacity onPress={() => { setSelectedWorkout(item); setDetailsModalVisible(true); }}>
+                          <Text style={styles.cardTitle}>{item.name}</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.cardSubtitle}>{item.description}</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12, gap: 16 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <MaterialCommunityIcons name="clock-outline" size={16} color="#64748b" />
+                          <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>{item.durationMinutes ?? 20} min</Text>
+                        </View>
+                        {typeof item.caloriesBurnt === 'number' && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <MaterialCommunityIcons name="fire" size={16} color="#f59e0b" />
+                            <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>
+                              {item.caloriesEstimated ? `est. ${Math.round(item.caloriesBurnt)} kcal` : `${Math.round(item.caloriesBurnt)} kcal`}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      {item.exercises && item.exercises.length > 0 && (
+                        <View style={{ marginBottom: 8 }}>
+                          {item.exercises.map((ex) => (
+                            <View key={String(ex.id ?? ex.name)} style={styles.exerciseRow}>
+                              <Text style={styles.exerciseName}>{ex.name}</Text>
+                              <Text style={styles.exerciseMeta}>
+                                {ex.sets ? `${ex.sets}x${ex.reps ?? ''}` : ''}
+                                {ex.durationSeconds ? `${ex.sets ? ' • ' : ''}${Math.round((ex.durationSeconds ?? 0) / 60)}m` : ''}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                      <View style={styles.cardActions}>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.editBtn]}
+                          onPress={() => startWorkout(item)}
+                        >
+                          <MaterialCommunityIcons name="play" size={16} color="#fff" />
+                          <Text style={styles.actionBtnText}>Iniciar Treino</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.deleteBtn]}
+                          onPress={() => openEdit(item)}
+                        >
+                          <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
+                          <Text style={styles.actionBtnText}>Personalizar</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
-                </View>
-                {item.exercises && item.exercises.length > 0 && (
-                  <View style={{ marginBottom: 8 }}>
-                    {item.exercises.map((ex) => (
-                      <View key={String(ex.id ?? ex.name)} style={styles.exerciseRow}>
-                        <Text style={styles.exerciseName}>{ex.name}</Text>
-                        <Text style={styles.exerciseMeta}>
-                          {ex.sets ? `${ex.sets}x${ex.reps ?? ''}` : ''}
-                          {ex.durationSeconds ? `${ex.sets ? ' • ' : ''}${Math.round((ex.durationSeconds ?? 0) / 60)}m` : ''}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-                <View style={styles.cardActions}>
-                  <TouchableOpacity 
-                    style={[styles.actionBtn, styles.editBtn]} 
-                    onPress={() => handleUseRecommended(item)}
-                  >
-                    <MaterialCommunityIcons name="play" size={16} color="#fff" />
-                    <Text style={styles.actionBtnText}>Usar Treino</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.actionBtn, styles.deleteBtn]} 
-                    onPress={() => openEdit(item)}
-                  >
-                    <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
-                    <Text style={styles.actionBtnText}>Personalizar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={{ alignItems: 'center', paddingTop: 60 }}>
-                <MaterialCommunityIcons name="star" size={80} color="#cbd5e1" />
-                <Text style={{ 
-                  color: '#64748b', 
-                  marginTop: 20, 
-                  textAlign: 'center',
-                  fontSize: 18,
-                  fontWeight: '700',
-                }}>
-                  Nenhuma recomendação disponível
-                </Text>
-              </View>
-            }
-          />
-        </View>
-      ) : (
-        // My workouts view
-        <View style={{ flex: 1 }}>
-          {loading ? (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 }}>
-              <ActivityIndicator size="large" color="#22c55e" />
-              <Text style={{ 
-                color: '#64748b', 
-                marginTop: 16, 
-                fontSize: 16,
-                fontWeight: '600',
-              }}>
-                Carregando treinos...
-              </Text>
+                  contentContainerStyle={{ paddingBottom: 10 }}
+                  showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={
+                    <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                      <MaterialCommunityIcons name="dumbbell" size={80} color="#cbd5e1" />
+                      <Text style={{
+                        color: '#64748b',
+                        marginTop: 20,
+                        textAlign: 'center',
+                        fontSize: 18,
+                        fontWeight: '700',
+                      }}>
+                        Nenhum treino encontrado
+                      </Text>
+                      <Text style={{
+                        color: '#94a3b8',
+                        marginTop: 8,
+                        textAlign: 'center',
+                        fontSize: 15,
+                        fontWeight: '500',
+                        maxWidth: 280,
+                        lineHeight: 22,
+                      }}>
+                        Crie seu primeiro treino personalizado para começar
+                      </Text>
+                    </View>
+                  }
+                />
+              )}
             </View>
           ) : (
-            <FlatList
-              data={workouts}
-              keyExtractor={(w, i) => String(w.id ?? i)}
-              renderItem={renderWorkout}
-              contentContainerStyle={{ paddingBottom: 10 }}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <View style={{ alignItems: 'center', paddingTop: 60 }}>
-                  <MaterialCommunityIcons name="dumbbell" size={80} color="#cbd5e1" />
-                  <Text style={{ 
-                    color: '#64748b', 
-                    marginTop: 20, 
-                    textAlign: 'center',
-                    fontSize: 18,
-                    fontWeight: '700',
+            // Treinos Recomendados section
+            <View style={{ flex: 1 }}>
+              {loadingRecommended ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 }}>
+                  <ActivityIndicator size="large" color="#22c55e" />
+                  <Text style={{
+                    color: '#64748b',
+                    marginTop: 16,
+                    fontSize: 16,
+                    fontWeight: '600',
                   }}>
-                    Nenhum treino encontrado
-                  </Text>
-                  <Text style={{ 
-                    color: '#94a3b8', 
-                    marginTop: 8, 
-                    textAlign: 'center',
-                    fontSize: 15,
-                    fontWeight: '500',
-                    maxWidth: 280,
-                    lineHeight: 22,
-                  }}>
-                    Crie seu primeiro treino personalizado para começar
+                    Carregando recomendações...
                   </Text>
                 </View>
-              }
-            />
+              ) : (
+                <View style={{ flex: 1 }}>
+                  {/* Refresh Button
+                  <TouchableOpacity
+                    style={[styles.headerBtn, { marginBottom: 16, backgroundColor: '#0ea5e9' }]}
+                    onPress={refreshRecommendedWorkouts}
+                    disabled={loadingRecommended}
+                  >
+                    <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
+                    <Text style={styles.headerBtnText}>Gerar Novas Recomendações</Text>
+                  </TouchableOpacity> */}
+
+                  <FlatList
+                    data={recommendedWorkouts}
+                    keyExtractor={(w) => String(w.id)}
+                    contentContainerStyle={{ paddingBottom: 10 }}
+                    showsVerticalScrollIndicator={false}
+                  renderItem={({ item }) => (
+                    <View style={styles.card}>
+                      <View style={styles.cardHeader}>
+                        <MaterialCommunityIcons name="star" size={24} color="#22c55e" />
+                        <TouchableOpacity onPress={() => { setSelectedWorkout(item); setDetailsModalVisible(true); }}>
+                          <Text style={styles.cardTitle}>{item.name}</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.cardSubtitle}>{item.description}</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 12, gap: 16 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <MaterialCommunityIcons name="clock-outline" size={16} color="#64748b" />
+                          <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>{item.durationMinutes ?? 20} min</Text>
+                        </View>
+                        {typeof item.caloriesBurnt === 'number' && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <MaterialCommunityIcons name="fire" size={16} color="#f59e0b" />
+                            <Text style={{ color: '#64748b', marginLeft: 6, fontWeight: '600' }}>
+                              {item.caloriesEstimated ? `est. ${Math.round(item.caloriesBurnt)} kcal` : `${Math.round(item.caloriesBurnt)} kcal`}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      {item.exercises && item.exercises.length > 0 && (
+                        <View style={{ marginBottom: 8 }}>
+                          {item.exercises.map((ex) => (
+                            <View key={String(ex.id ?? ex.name)} style={styles.exerciseRow}>
+                              <Text style={styles.exerciseName}>{ex.name}</Text>
+                              <Text style={styles.exerciseMeta}>
+                                {ex.sets ? `${ex.sets}x${ex.reps ?? ''}` : ''}
+                                {ex.durationSeconds ? `${ex.sets ? ' • ' : ''}${Math.round((ex.durationSeconds ?? 0) / 60)}m` : ''}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                      <View style={styles.cardActions}>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.editBtn]}
+                          onPress={() => handleUseRecommended(item)}
+                        >
+                          <MaterialCommunityIcons name="play" size={16} color="#fff" />
+                          <Text style={styles.actionBtnText}>Iniciar Treino</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.saveBtnRecommended]}
+                          onPress={() => saveRecommendedWorkout(item)}
+                        >
+                          <MaterialCommunityIcons name="content-save" size={16} color="#fff" />
+                          <Text style={styles.actionBtnText}>Salvar Treino</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionBtn, styles.deleteBtn]}
+                          onPress={() => openEdit(item)}
+                        >
+                          <MaterialCommunityIcons name="pencil" size={16} color="#fff" />
+                          <Text style={styles.actionBtnText}>Personalizar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                  ListEmptyComponent={
+                    <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                      <MaterialCommunityIcons name="star" size={80} color="#cbd5e1" />
+                      <Text style={{
+                        color: '#64748b',
+                        marginTop: 20,
+                        textAlign: 'center',
+                        fontSize: 18,
+                        fontWeight: '700',
+                      }}>
+                        Nenhuma recomendação disponível
+                      </Text>
+                      <Text style={{
+                        color: '#94a3b8',
+                        marginTop: 8,
+                        textAlign: 'center',
+                        fontSize: 15,
+                        fontWeight: '500',
+                        maxWidth: 280,
+                        lineHeight: 22,
+                      }}>
+                        Toque em atualizar para gerar novas recomendações
+                      </Text>
+                    </View>
+                  }
+                />
+                </View>
+              )}
+            </View>
           )}
         </View>
       )}
@@ -1784,5 +1962,123 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#22c55e',
+  },
+  // Section navigation styles
+  sectionContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 12,
+    padding: 2,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  sectionTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+    marginHorizontal: 4,
+  },
+  sectionTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 6,
+  },
+  activeSectionTab: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#22c55e',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  sectionTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+    letterSpacing: 0.25,
+  },
+  activeSectionTabText: {
+    color: '#22c55e',
+    fontWeight: '700',
+  },
+  // Recommended workout styles
+  recommendedCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#7c3aed',
+    backgroundColor: '#fefbff',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f9ff',
+    borderWidth: 2,
+    borderColor: '#0ea5e9',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  refreshButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0ea5e9',
+    letterSpacing: 0.25,
+  },
+  saveBtnRecommended: {
+    backgroundColor: '#7c3aed',
+    shadowColor: '#7c3aed',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  // Day Navigation styles
+  dayNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dayNavButton: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+  },
+  dateDisplay: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  dateText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    textTransform: 'capitalize',
+    textAlign: 'center',
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginTop: 2,
   },
 });

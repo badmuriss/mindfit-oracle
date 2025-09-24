@@ -2,12 +2,11 @@
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { Platform, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const { width } = Dimensions.get('window');
+  
   
   return (
     <Tabs
@@ -54,22 +53,22 @@ export default function TabsLayout() {
         }} 
       />
       <Tabs.Screen 
-        name="assistant" 
-        options={{ 
-          title: '',
-          headerShown: false,
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="robot-excited" size={26} color={color} />
-          ),
-        }} 
-      />
-      <Tabs.Screen 
         name="nutrition" 
         options={{ 
           title: '',
           headerShown: false,
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="food-apple" size={26} color={color} />
+          ),
+        }} 
+      />
+      <Tabs.Screen 
+        name="assistant" 
+        options={{ 
+          title: '',
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="robot-excited" size={26} color={color} />
           ),
         }} 
       />

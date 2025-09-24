@@ -13,6 +13,7 @@ public class RateLimitService {
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Bucket> profileGenerationBuckets = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Bucket> recommendationBuckets = new ConcurrentHashMap<>();
 
     public Bucket createBucketForUser(String userId) {
         return buckets.computeIfAbsent(userId, this::newBucket);
@@ -20,6 +21,10 @@ public class RateLimitService {
     
     public Bucket createBucketForProfileGeneration(String userId) {
         return profileGenerationBuckets.computeIfAbsent(userId + "_profile", this::newProfileGenerationBucket);
+    }
+
+    public Bucket createBucketForRecommendations(String userId) {
+        return recommendationBuckets.computeIfAbsent(userId + "_recommendations", this::newRecommendationBucket);
     }
 
     private Bucket newBucket(String userId) {
@@ -32,6 +37,14 @@ public class RateLimitService {
     private Bucket newProfileGenerationBucket(String key) {
         // Allow 5 profile generations per hour per user
         Bandwidth limit = Bandwidth.classic(5, Refill.intervally(5, Duration.ofHours(1)));
+        return Bucket.builder()
+                .addLimit(limit)
+                .build();
+    }
+
+    private Bucket newRecommendationBucket(String key) {
+        // Allow 20 recommendations per hour per user
+        Bandwidth limit = Bandwidth.classic(20, Refill.intervally(20, Duration.ofHours(1)));
         return Bucket.builder()
                 .addLimit(limit)
                 .build();

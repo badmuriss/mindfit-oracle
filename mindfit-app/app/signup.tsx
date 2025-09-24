@@ -191,7 +191,7 @@ export default function SignupScreen() {
                 await AsyncStorage.setItem('userEmail', profile.email);
               }
             }
-          } catch (err) {
+          } catch {
             // Silent error handling for profile fetch
           }
         }

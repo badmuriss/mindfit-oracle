@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, Dimensions, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, ScrollView } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, ScrollView } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
@@ -14,7 +13,7 @@ export default function ProfileScreen() {
   const [tempName, setTempName] = useState(userName || '');
   const [saving, setSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  
   
   // Sex editing states
   const [editingSex, setEditingSex] = useState(false);
@@ -107,9 +106,9 @@ export default function ProfileScreen() {
     const [, day, month, year] = dateStr.match(dateRegex)!;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     
-    if (date.getFullYear() != parseInt(year) || 
-        date.getMonth() != parseInt(month) - 1 || 
-        date.getDate() != parseInt(day)) {
+    if (date.getFullYear() !== parseInt(year) || 
+        date.getMonth() !== parseInt(month) - 1 || 
+        date.getDate() !== parseInt(day)) {
       return 'Data inválida';
     }
 
@@ -163,7 +162,7 @@ export default function ProfileScreen() {
       });
 
       if (!resp.ok) {
-        const text = await resp.text();
+        await resp.text();
         showMessage({ message: 'Erro ao atualizar perfil.', type: 'danger' });
         return;
       }
@@ -171,7 +170,7 @@ export default function ProfileScreen() {
       setUserName(tempName.trim());
       setEditing(false);
       showMessage({ message: 'Nome atualizado com sucesso!', type: 'success' });
-    } catch (err) {
+    } catch {
       showMessage({ message: 'Erro ao conectar com o servidor.', type: 'danger' });
     } finally {
       setSaving(false);
@@ -214,7 +213,7 @@ export default function ProfileScreen() {
       setEditingSex(false);
       setSexModalVisible(false);
       showMessage({ message: 'Sexo atualizado com sucesso!', type: 'success' });
-    } catch (err) {
+    } catch {
       showMessage({ message: 'Erro ao conectar com o servidor.', type: 'danger' });
     } finally {
       setSaving(false);
@@ -263,7 +262,7 @@ export default function ProfileScreen() {
       setUserProfile({ ...userProfile, birthDate: isoDate });
       setEditingBirthDate(false);
       showMessage({ message: 'Data de nascimento atualizada com sucesso!', type: 'success' });
-    } catch (err) {
+    } catch {
       showMessage({ message: 'Erro ao conectar com o servidor.', type: 'danger' });
     } finally {
       setSaving(false);
@@ -316,7 +315,7 @@ export default function ProfileScreen() {
     try {
       await logout();
       // Não precisa chamar router.replace aqui pois o layout já cuida disso
-    } catch (error) {
+    } catch {
       showMessage({ message: 'Erro ao fazer logout.', type: 'danger' });
     }
   };

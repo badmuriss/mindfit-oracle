@@ -43,7 +43,13 @@ public class User implements UserDetails {
     
     @CreatedDate
     private LocalDateTime createdAt;
-    
+
+    // Cache fields for recommendations
+    private String mealRecommendationsCache;
+    private LocalDateTime mealCacheExpiry;
+    private String workoutRecommendationsCache;
+    private LocalDateTime workoutCacheExpiry;
+
     private boolean enabled = true;
     private boolean accountNonExpired = true;
     private boolean accountNonLocked = true;

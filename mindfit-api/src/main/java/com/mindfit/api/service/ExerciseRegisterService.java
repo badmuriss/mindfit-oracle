@@ -59,10 +59,15 @@ public class ExerciseRegisterService {
         if (!SecurityUtil.isAdmin() && !userId.equals(SecurityUtil.getCurrentUserId())) {
             throw new UnauthorizedException("Users can only create their own exercise registers");
         }
-        
+
         ExerciseRegister exerciseRegister = exerciseRegisterMapper.toEntity(request);
         exerciseRegister.setUserId(userId);
-        
+
+        // Set timestamp to current time if not provided
+        if (exerciseRegister.getTimestamp() == null) {
+            exerciseRegister.setTimestamp(LocalDateTime.now());
+        }
+
         return exerciseRegisterMapper.toDto(exerciseRegisterRepository.save(exerciseRegister));
     }
 

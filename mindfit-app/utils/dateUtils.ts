@@ -50,12 +50,27 @@ export function nowUTC(): string {
 }
 
 /**
+ * Gets current date and time as a local time ISO string fragment (without Z)
+ */
+export function nowAsLocalTime(): string {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const d2 = new Date(d.getTime() - (offset*60*1000));
+  return d2.toISOString().slice(0, -1);
+}
+
+/**
  * Formats a UTC ISO string to local time string for display
  * @param utcISOString 
  * @returns formatted local time string
  */
 export function formatUTCToLocalTime(utcISOString: string): string {
-  return new Date(utcISOString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (!utcISOString) return '';
+  try {
+    return new Date(utcISOString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    return '';
+  }
 }
 
 /**
@@ -64,7 +79,19 @@ export function formatUTCToLocalTime(utcISOString: string): string {
  * @returns formatted local date time string
  */
 export function formatUTCToLocalDateTime(utcISOString: string): string {
-  return new Date(utcISOString).toLocaleString();
+  if (!utcISOString) return '';
+  try {
+    const date = new Date(utcISOString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (e) {
+    return '';
+  }
 }
 
 /**

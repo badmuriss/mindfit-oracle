@@ -1,11 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
-import { createLocalTimeAsUTC, nowUTC, formatUTCToLocalTime, formatUTCToLocalDateTime, updateUTCTime, localTimeAsUTC } from '../../utils/dateUtils';
+import { nowUTC, localTimeAsUTC } from '../../utils/dateUtils';
 import { searchProcessedFoods, ProcessedFoodItem, debounce } from '../../utils/usdaApi';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -30,7 +29,7 @@ export default function NutritionScreen() {
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -55,21 +54,42 @@ export default function NutritionScreen() {
   // Confirmation dialog state
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
   const [mealToDelete, setMealToDelete] = useState<Meal | null>(null);
-  
-  // Filter meals by selected date
-  const filteredMeals = meals.filter(meal => {
-    const mealDate = new Date(meal.timestamp);
-    return mealDate.toDateString() === selectedDate.toDateString();
-  });
 
-  const loadMeals = useCallback(async () => {
+  // Meal recommendations state
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  
+  const [recommendationError, setRecommendationError] = useState<string | null>(null);
+  
+
+
+  const loadMeals = useCallback(async (date: Date) => {
     if (!token || !userId) return;
     setLoading(true);
     try {
-      const pageable = encodeURIComponent(JSON.stringify({ page: 0, size: 50 }));
-      const resp = await fetch(API_ENDPOINTS.USERS.MEALS(userId, pageable), {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      const toYYYYMMDD = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      const params = new URLSearchParams({
+        startDate: toYYYYMMDD(startDate),
+        endDate: toYYYYMMDD(endDate),
+        page: '0',
+        size: '100',
+      });
+
+      const resp = await fetch(`${API_ENDPOINTS.USERS.MEALS(userId)}?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!resp.ok) {
         setMeals([]);
         return;
@@ -96,30 +116,76 @@ export default function NutritionScreen() {
     }
   }, [token, userId]);
 
+  // Get meal recommendations (now uses cached endpoint)
+  const getMealRecommendations = useCallback(async () => {
+    if (!token || !userId) return;
+
+    setRecommendationError(null);
+
+    try {
+      // Use new GET endpoint that automatically handles caching
+      const response = await fetch(API_ENDPOINTS.USERS.MEAL_RECOMMENDATIONS(userId), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to get recommendations: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      setRecommendations(data.recommendations || []);
+      setShowRecommendations(true);
+    } catch (error) {
+      console.error('Error getting meal recommendations:', error);
+      setRecommendationError('Failed to get meal recommendations. Please try again.');
+      showMessage({
+        message: 'Erro ao buscar sugestões de refeições',
+        type: 'danger'
+      });
+    } finally {
+    }
+  }, [token, userId]);
+
+
+
   useEffect(() => {
-    loadMeals();
-  }, [loadMeals]);
+    loadMeals(selectedDate);
+  }, [loadMeals, selectedDate]);
 
   const openCreate = () => {
     setIsEditing(false);
     setEditingId(null);
-    setName(''); 
-    setCalories(''); 
-    setCarbo(''); 
-    setProtein(''); 
+    setName('');
+    setCalories('');
+    setCarbo('');
+    setProtein('');
     setFat('');
     // Set timestamp to selected date with current time
     const now = new Date();
     const newTimestamp = new Date(selectedDate);
     newTimestamp.setHours(now.getHours(), now.getMinutes(), 0, 0);
     setTimestamp(newTimestamp.toISOString());
-    
+
     // Reset search state
     setSearchQuery('');
     setSearchResults([]);
     setSearchError(null);
-    
+
+    // Reset recommendation state and auto-load recommendations
+    setRecommendations([]);
+    setShowRecommendations(false);
+    setRecommendationError(null);
+
     setModalVisible(true);
+
+    // Auto-load meal recommendations when modal opens
+    setTimeout(() => {
+      getMealRecommendations();
+    }, 300); // Small delay to ensure modal is visible
   };
 
   const searchFoods = async (query: string) => {
@@ -159,11 +225,22 @@ export default function NutritionScreen() {
     setCarbo(String(food.carbs));
     setProtein(String(food.protein));
     setFat(String(food.fat));
-    
+
     // Clear search
     setSearchQuery('');
     setSearchResults([]);
     setSearchError(null);
+  };
+
+  // Apply a recommended meal
+  const applyRecommendation = (recommendation: any) => {
+    setName(recommendation.name || '');
+    setCalories(String(recommendation.estimatedCalories || ''));
+    setCarbo(String(recommendation.estimatedCarbs || ''));
+    setProtein(String(recommendation.estimatedProtein || ''));
+    setFat(String(recommendation.estimatedFat || ''));
+    setShowRecommendations(false);
+    setRecommendations([]);
   };
 
   const openEdit = (m: Meal) => {
@@ -222,13 +299,13 @@ export default function NutritionScreen() {
         setMeals((prev) => prev.filter((it) => (it.apiId || it.id) !== (m.apiId || m.id)));
         showMessage({ message: 'Refeição removida.', type: 'success' });
         // still refresh in background to ensure consistency
-        loadMeals();
+        loadMeals(selectedDate);
         return;
       }
 
       if (resp.status === 404) {
         showMessage({ message: 'Refeição não encontrada no servidor.', type: 'danger' });
-        await loadMeals();
+        await loadMeals(selectedDate); // refresh list
         return;
       }
 
@@ -288,7 +365,7 @@ export default function NutritionScreen() {
   showMessage({ message: isEditing ? 'Refeição atualizada.' : 'Refeição criada.', type: 'success' });
       setModalVisible(false);
       // refresh list: optimistic update if respJson has id
-      await loadMeals();
+      await loadMeals(selectedDate);
     } catch (err) {
       console.log('Error saving meal', err);
       showMessage({ message: 'Erro ao salvar refeição.', type: 'danger' });
@@ -297,7 +374,7 @@ export default function NutritionScreen() {
     }
   };
 
-  const onRefresh = async () => { setRefreshing(true); await loadMeals(); setRefreshing(false); };
+
 
   const renderMeal = ({ item }: { item: Meal }) => (
     <View style={styles.mealRow}>
@@ -371,11 +448,11 @@ export default function NutritionScreen() {
         </View>
       ) : (
         <FlatList
-          data={filteredMeals}
+          data={meals}
           keyExtractor={(m) => String(m.apiId || m.id || m.timestamp)}
           renderItem={renderMeal}
           refreshing={refreshing}
-          onRefresh={onRefresh}
+          onRefresh={() => loadMeals(selectedDate)}
           contentContainerStyle={{ paddingBottom: 40 }}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: 60 }}>
@@ -494,6 +571,84 @@ export default function NutritionScreen() {
                       </Text>
                     </View>
                   )}
+
+                  {/* AI Meal Suggestions */}
+                  <View style={styles.suggestionSection}>
+                    <Text style={styles.label}>Sugestões de IA</Text>
+
+                    {/* Load Cached Recommendations Button
+                    {!showRecommendations && (
+                      <TouchableOpacity
+                        style={styles.suggestionButton}
+                        onPress={getMealRecommendations}
+                        disabled={loadingRecommendations}
+                      >
+                        {loadingRecommendations ? (
+                          <ActivityIndicator size="small" color="#22c55e" />
+                        ) : (
+                          <MaterialCommunityIcons name="robot" size={20} color="#22c55e" />
+                        )}
+                        <Text style={styles.suggestionButtonText}>
+                          {loadingRecommendations ? 'Carregando sugestões...' : 'Ver sugestões de refeições'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    Refresh Recommendations Button
+                    {showRecommendations && (
+                      <TouchableOpacity
+                        style={[styles.suggestionButton, { backgroundColor: '#f0f9ff', borderColor: '#0ea5e9' }]}
+                        onPress={refreshMealRecommendations}
+                        disabled={loadingRecommendations}
+                      >
+                        {loadingRecommendations ? (
+                          <ActivityIndicator size="small" color="#0ea5e9" />
+                        ) : (
+                          <MaterialCommunityIcons name="refresh" size={20} color="#0ea5e9" />
+                        )}
+                        <Text style={[styles.suggestionButtonText, { color: '#0ea5e9' }]}>
+                          {loadingRecommendations ? 'Atualizando...' : 'Gerar novas sugestões'}
+                        </Text>
+                      </TouchableOpacity>
+                    )} */}
+
+                    {/* Recommendation Results */}
+                    {showRecommendations && recommendations.length > 0 && (
+                      <View style={styles.recommendationsContainer}>
+                        <Text style={styles.recommendationsTitle}>Sugestões para você:</Text>
+                        {recommendations.map((rec, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={styles.recommendationCard}
+                            onPress={() => applyRecommendation(rec)}
+                          >
+                            <Text style={styles.recommendationName}>{rec.name}</Text>
+                            <Text style={styles.recommendationDescription} numberOfLines={2}>
+                              {rec.description}
+                            </Text>
+                            <View style={styles.macroRow}>
+                              <Text style={styles.macroText}>Cal: {rec.estimatedCalories}</Text>
+                              <Text style={styles.macroText}>C: {rec.estimatedCarbs}g</Text>
+                              <Text style={styles.macroText}>P: {rec.estimatedProtein}g</Text>
+                              <Text style={styles.macroText}>G: {rec.estimatedFat}g</Text>
+                            </View>
+                            {rec.suitabilityReason && (
+                              <Text style={styles.recommendationReason} numberOfLines={2}>
+                                💡 {rec.suitabilityReason}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+
+                    {recommendationError && (
+                      <View style={styles.errorContainer}>
+                        <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
+                        <Text style={styles.errorText}>{recommendationError}</Text>
+                      </View>
+                    )}
+                  </View>
                 </>
               )}
 
@@ -1078,6 +1233,94 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     flex: 1,
   },
+  // AI Recommendations styles
+  suggestionSection: {
+    marginBottom: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  suggestionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    borderRadius: 14,
+    padding: 16,
+    gap: 8,
+    marginTop: 8,
+  },
+  suggestionButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#22c55e',
+    letterSpacing: 0.25,
+  },
+  recommendationsContainer: {
+    marginTop: 16,
+    gap: 12,
+  },
+  recommendationsTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 8,
+    letterSpacing: 0.25,
+  },
+  recommendationCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  recommendationName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
+    letterSpacing: 0.25,
+  },
+  recommendationDescription: {
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  recommendationReason: {
+    fontSize: 12,
+    color: '#7c3aed',
+    backgroundColor: '#faf5ff',
+    padding: 8,
+    borderRadius: 8,
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    marginTop: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#dc2626',
+    fontWeight: '600',
+    flex: 1,
+  },
   // Day Navigation styles
   dayNavigation: {
     flexDirection: 'row',
@@ -1231,24 +1474,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    gap: 12,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#dc2626',
-    fontWeight: '600',
-    lineHeight: 20,
   },
   emptySearchContainer: {
     alignItems: 'center',

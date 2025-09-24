@@ -7,6 +7,7 @@ import com.mindfit.api.repository.UserRepository;
 import com.mindfit.api.service.LogService;
 import com.mindfit.api.service.MealRegisterService;
 import com.mindfit.api.service.MeasurementsRegisterService;
+import com.mindfit.api.service.ExerciseRegisterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -16,7 +17,9 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Period;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -32,6 +35,7 @@ public class ChatbotService {
     private final LogService logService;
     private final MealRegisterService mealRegisterService;
     private final MeasurementsRegisterService measurementsRegisterService;
+    private final ExerciseRegisterService exerciseRegisterService;
     private final Map<String, Deque<String>> conversations = new ConcurrentHashMap<>();
     private static final int MAX_TURNS = 10; // keep last 10 user-assistant exchanges
 
@@ -190,9 +194,9 @@ public class ChatbotService {
                 // Continue without measurements data
             }
             
-            // Add recent meals data
+            // Add recent meals data with time analysis
             try {
-                var meals = mealRegisterService.findByUserId(userId, PageRequest.of(0, 10));
+                var meals = mealRegisterService.findByUserId(userId, PageRequest.of(0, 20));
                 if (meals.hasContent()) {
                     profileBuilder.append("RECENT MEALS:\n");
                     meals.getContent().forEach(meal -> {
@@ -201,12 +205,49 @@ public class ChatbotService {
                         if (meal.carbo() != null) profileBuilder.append(", ").append(meal.carbo()).append("g carbs");
                         if (meal.protein() != null) profileBuilder.append(", ").append(meal.protein()).append("g protein");
                         if (meal.fat() != null) profileBuilder.append(", ").append(meal.fat()).append("g fat");
+                        profileBuilder.append(", at ").append(meal.timestamp().format(DateTimeFormatter.ofPattern("HH:mm")));
                         profileBuilder.append(")\n");
                     });
                     profileBuilder.append("\n");
+
+                    // Analyze meal timing patterns
+                    profileBuilder.append("MEAL TIMING ANALYSIS:\n");
+                    profileBuilder.append("Analyze the times above to identify patterns: ");
+                    profileBuilder.append("What are the user's typical breakfast, lunch, dinner, and snack times? ");
+                    profileBuilder.append("Are they an early morning eater or prefer later meals? ");
+                    profileBuilder.append("Do they have consistent meal schedules?\n\n");
                 }
             } catch (Exception e) {
                 // Continue without meals data
+            }
+
+            // Add recent exercises data with time analysis
+            try {
+                var exercises = exerciseRegisterService.findByUserId(userId, PageRequest.of(0, 15));
+                if (exercises.hasContent()) {
+                    profileBuilder.append("RECENT EXERCISES:\n");
+                    exercises.getContent().forEach(exercise -> {
+                        profileBuilder.append("- ").append(exercise.name());
+                        if (exercise.durationInMinutes() != null) {
+                            profileBuilder.append(" (").append(exercise.durationInMinutes()).append(" min");
+                        }
+                        if (exercise.caloriesBurnt() != null) {
+                            profileBuilder.append(", ").append(exercise.caloriesBurnt()).append(" kcal burned");
+                        }
+                        profileBuilder.append(", at ").append(exercise.timestamp().format(DateTimeFormatter.ofPattern("HH:mm")));
+                        profileBuilder.append(")\n");
+                    });
+                    profileBuilder.append("\n");
+
+                    // Analyze exercise timing patterns
+                    profileBuilder.append("EXERCISE TIMING ANALYSIS:\n");
+                    profileBuilder.append("Analyze the workout times above to identify patterns: ");
+                    profileBuilder.append("Is this user a morning, afternoon, or evening exerciser? ");
+                    profileBuilder.append("What intensity levels work best at different times? ");
+                    profileBuilder.append("Do they prefer consistent workout schedules or vary their timing?\n\n");
+                }
+            } catch (Exception e) {
+                // Continue without exercise data
             }
             
             // Add the new observations
@@ -216,18 +257,22 @@ public class ChatbotService {
             
             // Instructions for profile generation
             profileBuilder.append("INSTRUCTIONS:\n");
-            profileBuilder.append("Generate a personalized nutrition and fitness profile (max 200 words) that includes:\n");
+            profileBuilder.append("Generate a personalized nutrition and fitness profile (max 250 words) that includes:\n");
             profileBuilder.append("- Dietary recommendations based on user's preferences and restrictions\n");
-            profileBuilder.append("- Fitness goals and exercise suggestions\n");
+            profileBuilder.append("- Fitness goals and exercise suggestions with optimal timing\n");
+            profileBuilder.append("- TIME-BASED PATTERNS: Include specific times for meals and workouts based on the analysis above\n");
+            profileBuilder.append("- MEAL TIMING: Recommend optimal meal times (e.g., 'typically eats lunch at 12:30pm, prefers protein-rich meals')\n");
+            profileBuilder.append("- WORKOUT TIMING: Suggest best workout times and intensities (e.g., 'morning cardio at 7am, evening strength training')\n");
             profileBuilder.append("- Any health considerations mentioned\n");
-            profileBuilder.append("- Personalized tips based on measurements and meal history\n");
-            profileBuilder.append("Keep it professional, actionable, and personalized.");
+            profileBuilder.append("- Personalized tips based on measurements and behavioral patterns\n");
+            profileBuilder.append("Format: Include a 'OPTIMAL SCHEDULE' section with specific time recommendations.\n");
+            profileBuilder.append("Keep it professional, actionable, and time-specific.");
             
             String profilePrompt = profileBuilder.toString();
             
             OpenAiChatOptions options = OpenAiChatOptions.builder()
                     .temperature(0.2)
-                    .maxTokens(300)
+                    .maxTokens(400)
                     .build();
             
             Prompt prompt = new Prompt(

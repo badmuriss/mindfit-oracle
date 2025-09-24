@@ -43,45 +43,16 @@ export const API_ENDPOINTS = {
     SIGNUP: `${baseUrl}/auth/user/signup`,
   },
   USERS: {
-    PROFILE: (userId: string) => {
-      const url = `${baseUrl}/users/${userId}`;
-      console.log('PROFILE URL:', url);
-      return url;
-    },
-    MEALS: (userId: string, pageable?: string) => {
-      const url = `${baseUrl}/users/${userId}/meals${pageable ? `?pageable=${pageable}` : ''}`;
-      console.log('MEALS URL:', url);
-      return url;
-    },
-    MEAL_BY_ID: (userId: string, mealId: string | number) => {
-      const url = `${baseUrl}/users/${userId}/meals/${encodeURIComponent(String(mealId))}`;
-      console.log('MEAL_BY_ID URL:', url);
-      return url;
-    },
-    EXERCISES: (userId: string, pageable?: string) => {
-      const url = `${baseUrl}/users/${userId}/exercises${pageable ? `?pageable=${pageable}` : ''}`;
-      console.log('EXERCISES URL:', url);
-      return url;
-    },
-    EXERCISE_BY_ID: (userId: string, exerciseId: string | number) => {
-      const url = `${baseUrl}/users/${userId}/exercises/${encodeURIComponent(String(exerciseId))}`;
-      console.log('EXERCISE_BY_ID URL:', url);
-      return url;
-    },
-    MEASUREMENTS: (userId: string, pageable?: string) => {
-      const url = `${baseUrl}/users/${userId}/measurements${pageable ? `?pageable=${pageable}` : ''}`;
-      console.log('MEASUREMENTS URL:', url);
-      return url;
-    },
-    CHATBOT: (userId: string) => {
-      const url = `${baseUrl}/users/${userId}/chatbot`;
-      console.log('CHATBOT URL:', url);
-      return url;
-    },
-    GENERATE_PROFILE: (userId: string) => {
-      const url = `${baseUrl}/users/${userId}/generate-profile`;
-      console.log('GENERATE_PROFILE URL:', url);
-      return url;
-    },
+    PROFILE: (userId: string) => `${baseUrl}/users/${userId}`,
+    MEALS: (userId: string) => `${baseUrl}/users/${userId}/meals`,
+    MEAL_BY_ID: (userId: string, mealId: string | number) => `${baseUrl}/users/${userId}/meals/${encodeURIComponent(String(mealId))}`,
+    EXERCISES: (userId: string) => `${baseUrl}/users/${userId}/exercises`,
+    EXERCISE_BY_ID: (userId: string, exerciseId: string | number) => `${baseUrl}/users/${userId}/exercises/${encodeURIComponent(String(exerciseId))}`,
+    MEASUREMENTS: (userId: string) => `${baseUrl}/users/${userId}/measurements`,
+    CHATBOT: (userId: string) => `${baseUrl}/users/${userId}/chatbot`,
+    GENERATE_PROFILE: (userId: string) => `${baseUrl}/users/${userId}/generate-profile`,
+    RECOMMEND_WORKOUT: (userId: string) => `${baseUrl}/users/${userId}/recommend-workout`,
+    MEAL_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/meal-recommendations`,
+    WORKOUT_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/workout-recommendations`,
   },
 };

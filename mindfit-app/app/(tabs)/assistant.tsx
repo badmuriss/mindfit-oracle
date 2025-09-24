@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
 import React, { useState } from 'react';
-import { ActivityIndicator, Dimensions, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';

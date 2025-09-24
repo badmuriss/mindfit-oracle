@@ -19,7 +19,7 @@ const HomeScreen = () => {
       await logout();
       // Forçar navegação para login após logout
       router.replace('/login');
-    } catch (error) {
+    } catch {
       showMessage({ message: 'Erro ao fazer logout.', type: 'danger' });
     }
   };
@@ -42,70 +42,6 @@ const HomeScreen = () => {
   const loadLatest = useCallback(async () => {
     if (!token || !userId) return;
     setMeasurementLoading(true);
-    
-    // Mock de dados para desenvolvimento
-    if (__DEV__ && userId === 'dev-user-001') {
-      console.log('🔧 DEV MODE: Carregando dados fictícios de medições');
-      
-      // Simular dados de exemplo dos últimos 30 dias
-      const mockData = [];
-      const today = new Date();
-      
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-        // Peso varia entre 77-82kg com tendência de redução
-        const baseWeight = 82 - (i * 0.1) + (Math.random() * 1 - 0.5);
-        
-        mockData.push({
-          id: `mock-${i}`,
-          weightInKG: Number(baseWeight.toFixed(1)),
-          heightInCM: 178,
-          timestamp: date.toISOString(),
-          userId: 'dev-user-001'
-        });
-      }
-      
-      // Processar dados como na API real
-      const items = mockData.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      
-      // Extrair histórico de peso - apenas um registro por dia (o mais recente)
-      const weightByDay = new Map<string, any>();
-      
-      items
-        .filter((item: any) => item.weightInKG != null)
-        .forEach((item: any) => {
-          const dateKey = new Date(item.timestamp).toDateString();
-          if (!weightByDay.has(dateKey) || new Date(item.timestamp) > new Date(weightByDay.get(dateKey).timestamp)) {
-            weightByDay.set(dateKey, item);
-          }
-        });
-      
-      // Converter para array e pegar os últimos 10 dias
-      const weightHistoryData = Array.from(weightByDay.values())
-        .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .slice(-10)
-        .map((item: any) => ({
-          weight: item.weightInKG,
-          date: new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-        }));
-      
-      setWeightHistory(weightHistoryData);
-      
-      const latest = items[0];
-      setWeightKg(latest.weightInKG ?? null);
-      setHeightCm(latest.heightInCM ?? null);
-      
-      if (items.length > 1) {
-        const prev = items[1];
-        if (prev && typeof prev.weightInKG === 'number' && typeof latest.weightInKG === 'number') {
-          setDeltaKg(Number((latest.weightInKG - prev.weightInKG).toFixed(1)));
-        }
-      }
-      
-      setMeasurementLoading(false);
-      console.log('📊 DEV MODE: Dados fictícios carregados:', { peso: latest.weightInKG, altura: latest.heightInCM });
-      return;
-    }
     
     try {
       const resp = await fetch(API_ENDPOINTS.USERS.MEASUREMENTS(userId), {
@@ -289,14 +225,14 @@ const HomeScreen = () => {
         body: JSON.stringify({ ...payload, timestamp: new Date().toISOString() }),
       });
       if (!resp.ok) {
-        const text = await resp.text();
+        await resp.text();
         showMessage({ message: 'Erro ao salvar medição.', type: 'danger' });
         return;
       }
       showMessage({ message: 'Medição salva.', type: 'success' });
       // refresh latest
       await loadLatest();
-    } catch (err) {
+    } catch {
       showMessage({ message: 'Erro ao salvar medição.', type: 'danger' });
     } finally {
       setSaveLoading(false);
