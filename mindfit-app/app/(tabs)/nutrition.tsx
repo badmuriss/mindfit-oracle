@@ -733,7 +733,7 @@ export default function NutritionScreen() {
                               <Text style={styles.macroText}>G: {rec.estimatedFat}g</Text>
                             </View>
                             {rec.suitabilityReason && (
-                              <Text style={styles.recommendationReason} numberOfLines={2}>
+                              <Text style={styles.recommendationReason}>
                                 💡 {rec.suitabilityReason}
                               </Text>
                             )}

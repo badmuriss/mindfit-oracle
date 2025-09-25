@@ -1061,15 +1061,6 @@ export default function ExploreScreen() {
                 </View>
               ) : (
                 <View style={{ flex: 1 }}>
-                  {/* Refresh Button
-                  <TouchableOpacity
-                    style={[styles.headerBtn, { marginBottom: 16, backgroundColor: '#0ea5e9' }]}
-                    onPress={refreshRecommendedWorkouts}
-                    disabled={loadingRecommended}
-                  >
-                    <MaterialCommunityIcons name="refresh" size={20} color="#fff" />
-                    <Text style={styles.headerBtnText}>Gerar Novas Recomendações</Text>
-                  </TouchableOpacity> */}
 
                   <FlatList
                     data={recommendedWorkouts}
@@ -1132,6 +1123,15 @@ export default function ExploreScreen() {
                   )}
                   ListEmptyComponent={
                     <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                      {/* Refresh Button  */}
+                      <TouchableOpacity
+                        style={styles.refreshButton}
+                        onPress={generateNewWorkoutRecommendations}
+                        disabled={loadingRecommended}
+                      >
+                        <MaterialCommunityIcons name="refresh" size={20} color="#0ea5e9" />
+                        <Text style={styles.refreshButtonText}>Atualizar Treinos</Text>
+                      </TouchableOpacity>
                       <MaterialCommunityIcons name="star" size={80} color="#cbd5e1" />
                       <Text style={{
                         color: '#64748b',
@@ -1140,7 +1140,7 @@ export default function ExploreScreen() {
                         fontSize: 18,
                         fontWeight: '700',
                       }}>
-                        Nenhuma recomendação disponível
+                        Erro ao gerar recomendações
                       </Text>
                       <Text style={{
                         color: '#94a3b8',
@@ -1151,7 +1151,7 @@ export default function ExploreScreen() {
                         maxWidth: 280,
                         lineHeight: 22,
                       }}>
-                        Toque em atualizar para gerar novas recomendações
+                        Toque em atualizar para gerar novamente
                       </Text>
                     </View>
                   }
