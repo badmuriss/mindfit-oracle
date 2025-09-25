@@ -1,6 +1,6 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -189,12 +189,12 @@ export class UserFormDialogComponent implements OnInit {
   loading = false;
   isSuperAdmin = false;
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    public dialogRef: MatDialogRef<UserFormDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: UserDialogData
-  ) {
+  private readonly fb = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
+  public dialogRef = inject(MatDialogRef<UserFormDialogComponent>);
+  public data = inject(MAT_DIALOG_DATA) as UserDialogData;
+
+  constructor() {
     this.userForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
@@ -228,7 +228,7 @@ export class UserFormDialogComponent implements OnInit {
     }
   }
 
-  dateFormatValidator(control: any) {
+  dateFormatValidator(control: AbstractControl): ValidationErrors | null {
     if (!control.value) {
       return null; // Let required validator handle empty values
     }
@@ -253,7 +253,7 @@ export class UserFormDialogComponent implements OnInit {
     return null;
   }
 
-  ageValidator(control: any) {
+  ageValidator(control: AbstractControl): ValidationErrors | null {
     if (!control.value) {
       return null; // Let required validator handle empty values
     }
@@ -283,12 +283,12 @@ export class UserFormDialogComponent implements OnInit {
     return null;
   }
 
-  formatBirthDateInput(event: any): void {
+  formatBirthDateInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     let value = input.value.replace(/\D/g, ''); // Remove non-digits
     
     if (value.length <= 2) {
-      value = value;
+      // Value stays as is for length <= 2
     } else if (value.length <= 4) {
       value = `${value.slice(0, 2)}/${value.slice(2)}`;
     } else {

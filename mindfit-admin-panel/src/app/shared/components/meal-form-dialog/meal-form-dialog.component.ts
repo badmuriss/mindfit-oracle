@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -150,14 +150,14 @@ export interface MealDialogData {
   `]
 })
 export class MealFormDialogComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  dialogRef = inject<MatDialogRef<MealFormDialogComponent>>(MatDialogRef);
+  data = inject<MealDialogData>(MAT_DIALOG_DATA);
+
   mealForm: FormGroup;
   loading = false;
 
-  constructor(
-    private fb: FormBuilder,
-    public dialogRef: MatDialogRef<MealFormDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: MealDialogData
-  ) {
+  constructor() {
     this.mealForm = this.fb.group({
       name: ['', [Validators.required]],
       timestamp: ['', [Validators.required]],

@@ -18,6 +18,9 @@ public interface ExerciseRegisterMapper {
     @Mapping(target = "createdAt", ignore = true)
     ExerciseRegister toEntity(ExerciseRegisterCreateRequest request);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateEntity(ExerciseRegisterUpdateRequest request, @MappingTarget ExerciseRegister exerciseRegister);
 
     ExerciseRegisterResponse toResponse(ExerciseRegister exerciseRegister);
@@ -26,5 +29,8 @@ public interface ExerciseRegisterMapper {
 
     ExerciseRegisterDto toDto(ExerciseRegister exerciseRegister);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     ExerciseRegister toEntity(ExerciseRegisterDto dto);
 }

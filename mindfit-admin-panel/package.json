@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "api:generate": "openapi --input http://localhost:8088/api-docs --output ./src/app/api --client axios"
+    "api:generate": "openapi --input http://localhost:8088/api-docs --output ./src/app/api --client axios",
+    "lint": "ng lint"
   },
   "prettier": {
     "printWidth": 100,
@@ -43,16 +44,29 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@angular-eslint/builder": "20.3.0",
+    "@angular-eslint/eslint-plugin": "20.3.0",
+    "@angular-eslint/eslint-plugin-template": "20.3.0",
+    "@angular-eslint/schematics": "20.3.0",
+    "@angular-eslint/template-parser": "20.3.0",
     "@angular/build": "^20.2.0",
     "@angular/cli": "^20.2.0",
     "@angular/compiler-cli": "^20.2.0",
     "@types/jasmine": "~5.1.0",
+    "@typescript-eslint/eslint-plugin": "7.11.0",
+    "@typescript-eslint/parser": "7.11.0",
+    "eslint": "8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-rxjs": "^5.0.3",
+    "eslint-plugin-rxjs-angular": "^2.0.1",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "prettier": "^3.6.2",
     "typescript": "~5.9.2"
   }
 }

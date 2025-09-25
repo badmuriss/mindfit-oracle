@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -19,16 +19,15 @@ export interface PaginationParams {
   sort?: string;
   from?: string;
   to?: string;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
+  private readonly http = inject(HttpClient);
   private baseUrl = environment.apiBaseUrl;
-
-  constructor(private http: HttpClient) {}
 
   private buildParams(params: PaginationParams = {}): HttpParams {
     let httpParams = new HttpParams();
@@ -45,11 +44,11 @@ export class ApiService {
     });
   }
 
-  post<T>(endpoint: string, data: any): Observable<T> {
+  post<T>(endpoint: string, data: unknown): Observable<T> {
     return this.http.post<T>(`${this.baseUrl}${endpoint}`, data);
   }
 
-  put<T>(endpoint: string, data: any): Observable<T> {
+  put<T>(endpoint: string, data: unknown): Observable<T> {
     return this.http.put<T>(`${this.baseUrl}${endpoint}`, data);
   }
 

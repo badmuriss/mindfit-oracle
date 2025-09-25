@@ -151,7 +151,7 @@ export default function NutritionScreen() {
             errorMessage = errorJson.message;
           }
         } catch (e) {
-          // Use default error message if JSON parsing fails
+          console.error(e);
         }
 
         throw new Error(`GENERAL:${errorMessage}`);
@@ -230,7 +230,7 @@ export default function NutritionScreen() {
             errorMessage = errorJson.message;
           }
         } catch (e) {
-          // Use default error message if JSON parsing fails
+          console.error(e);
         }
 
         throw new Error(`GENERAL:${errorMessage}`);

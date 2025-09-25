@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator, PageEvent } from '@angular/material/paginator';
@@ -25,16 +25,16 @@ export interface TableColumn {
 export interface TableAction {
   icon: string;
   label: string;
-  handler: (item: any) => void;
+  handler: (item: unknown) => void;
   color?: string;
-  visible?: (item: any) => boolean;
+  visible?: (item: unknown) => boolean;
 }
 
 export interface TableFilters {
   from?: string;
   to?: string;
   search?: string;
-  [key: string]: any;
+  [key: string]: string | undefined;
 }
 
 @Component({
@@ -185,8 +185,10 @@ export interface TableFilters {
   `]
 })
 export class DataTableComponent implements OnInit, OnChanges {
+  private fb = inject(FormBuilder);
+
   @Input() columns: TableColumn[] = [];
-  @Input() data: any[] = [];
+  @Input() data: unknown[] = [];
   @Input() totalElements = 0;
   @Input() pageSize = 20;
   @Input() pageIndex = 0;
@@ -208,11 +210,11 @@ export class DataTableComponent implements OnInit, OnChanges {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  dataSource = new MatTableDataSource<any>([]);
+  dataSource = new MatTableDataSource<unknown>([]);
   displayedColumns: string[] = [];
   filterForm: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor() {
     this.filterForm = this.fb.group({
       search: [''],
       from: [''],

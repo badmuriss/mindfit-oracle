@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -22,14 +22,14 @@ export class AuthService {
   private readonly TOKEN_KEY = 'admin_token';
   private readonly USER_KEY = 'admin_user';
   private baseUrl = environment.apiBaseUrl;
-  
+
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+
   private currentUserSubject = new BehaviorSubject<LoginResponse | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) {
+  constructor() {
     const storedUser = localStorage.getItem(this.USER_KEY);
     if (storedUser) {
       this.currentUserSubject.next(JSON.parse(storedUser));

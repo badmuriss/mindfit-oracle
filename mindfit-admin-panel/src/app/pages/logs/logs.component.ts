@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil, switchMap } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
@@ -9,14 +9,10 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
- 
-
-import { DataTableComponent, TableColumn, TableFilters } from '../../shared/components/data-table/data-table.component';
-import { ApiService, PaginationParams } from '../../api/api.service';
+import { DataTableComponent, TableColumn } from '../../shared/components/data-table/data-table.component';
+import { ApiService, PaginationParams, PaginatedResponse } from '../../api/api.service';
 import { PageEvent } from '@angular/material/paginator';
 import { Sort } from '@angular/material/sort';
-
- 
 
 export interface LogEntry {
   id: string;
@@ -25,6 +21,15 @@ export interface LogEntry {
   name: string;
   stackTrace: string;
   timestamp: string;
+}
+
+export interface LogsResponse extends PaginatedResponse<LogEntry> {}
+
+
+export interface LogFilters {
+  type?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 @Component({
@@ -129,6 +134,9 @@ export interface LogEntry {
   `]
 })
 export class LogsComponent implements OnInit, OnDestroy {
+  private fb = inject(FormBuilder);
+  private apiService = inject(ApiService);
+
   private destroy$ = new Subject<void>();
   private loadLogs$ = new Subject<void>();
 
@@ -148,13 +156,10 @@ export class LogsComponent implements OnInit, OnDestroy {
     { key: 'stackTrace', label: 'Details', sortable: false, type: 'longText' }
   ];
 
-  private currentFilters: TableFilters = {};
+  private currentFilters: PaginationParams = {};
   private currentSort = 'timestamp,desc';
 
-  constructor(
-    private fb: FormBuilder,
-    private apiService: ApiService
-  ) {
+  constructor() {
     this.filtersForm = this.fb.group({
       type: [''],
       from: [null],
@@ -175,7 +180,7 @@ export class LogsComponent implements OnInit, OnDestroy {
             sort: this.currentSort,
             ...this.currentFilters
           };
-          return this.apiService.get<any>('/logs', params);
+          return this.apiService.get<LogsResponse>('/logs', params);
         })
       )
       .subscribe({
@@ -220,14 +225,14 @@ export class LogsComponent implements OnInit, OnDestroy {
 
   apply(): void {
     const { type, from, to } = this.filtersForm.value;
-    const mapped: any = {};
+    const mapped: LogFilters = {};
     if (type) mapped.type = type;
     if (from) mapped.startDate = this.toDateOnly(from);
     if (to) mapped.endDate = this.toDateOnly(to);
 
-    delete (this.currentFilters as any).type;
-    delete (this.currentFilters as any).startDate;
-    delete (this.currentFilters as any).endDate;
+    delete this.currentFilters['type'];
+    delete this.currentFilters['startDate'];
+    delete this.currentFilters['endDate'];
 
     this.currentFilters = { ...this.currentFilters, ...mapped };
     this.pageIndex = 0;
@@ -236,9 +241,11 @@ export class LogsComponent implements OnInit, OnDestroy {
 
   clear(): void {
     this.filtersForm.reset({ type: '', from: null, to: null });
-    delete (this.currentFilters as any).type;
-    delete (this.currentFilters as any).startDate;
-    delete (this.currentFilters as any).endDate;
+    const filters = this.currentFilters;
+    delete filters['type'];
+    delete filters['startDate'];
+    delete filters['endDate'];
+    this.currentFilters = filters;
     this.pageIndex = 0;
     this.loadLogs();
   }

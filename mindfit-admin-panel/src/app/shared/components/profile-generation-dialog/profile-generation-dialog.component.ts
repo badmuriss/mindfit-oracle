@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -109,14 +109,12 @@ export interface ProfileGenerationFormData {
   `]
 })
 export class ProfileGenerationDialogComponent {
+  private dialogRef = inject<MatDialogRef<ProfileGenerationDialogComponent>>(MatDialogRef);
+  data = inject<ProfileGenerationDialogData>(MAT_DIALOG_DATA);
+
   formData: ProfileGenerationFormData = {
     observations: ''
   };
-
-  constructor(
-    private dialogRef: MatDialogRef<ProfileGenerationDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: ProfileGenerationDialogData
-  ) {}
 
   onSubmit(): void {
     if (this.formData.observations.trim()) {

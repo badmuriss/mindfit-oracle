@@ -18,6 +18,9 @@ public interface MealRegisterMapper {
     @Mapping(target = "createdAt", ignore = true)
     MealRegister toEntity(MealRegisterCreateRequest request);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateEntity(MealRegisterUpdateRequest request, @MappingTarget MealRegister mealRegister);
 
     MealRegisterResponse toResponse(MealRegister mealRegister);
@@ -26,5 +29,8 @@ public interface MealRegisterMapper {
 
     MealRegisterDto toDto(MealRegister mealRegister);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     MealRegister toEntity(MealRegisterDto dto);
 }

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
@@ -116,14 +116,14 @@ export interface MeasurementDialogData {
   `]
 })
 export class MeasurementFormDialogComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  dialogRef = inject<MatDialogRef<MeasurementFormDialogComponent>>(MatDialogRef);
+  data = inject<MeasurementDialogData>(MAT_DIALOG_DATA);
+
   measurementForm: FormGroup;
   loading = false;
 
-  constructor(
-    private fb: FormBuilder,
-    public dialogRef: MatDialogRef<MeasurementFormDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: MeasurementDialogData
-  ) {
+  constructor() {
     this.measurementForm = this.fb.group({
       weightInKG: [0, [Validators.required, Validators.min(0)]],
       heightInCM: [0, [Validators.required, Validators.min(0)]],

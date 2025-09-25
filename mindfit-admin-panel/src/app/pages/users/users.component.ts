@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, takeUntil, switchMap } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
-
 import { DataTableComponent, TableColumn, TableAction, TableFilters } from '../../shared/components/data-table/data-table.component';
 import { ApiService, PaginationParams } from '../../api/api.service';
 import { ToastService } from '../../shared/services/toast.service';
@@ -19,6 +18,24 @@ export interface User {
   roles: string[];
   createdAt: string;
   lastLogonDate: string;
+}
+
+export interface UsersResponse {
+  content: User[];
+  page: {
+    totalElements: number;
+    totalPages: number;
+    size: number;
+    number: number;
+  };
+}
+
+export interface UpdateUserPayload {
+  name: string;
+  email: string;
+  password?: string;
+  sex?: string;
+  birthDate?: string;
 }
 
 @Component({
@@ -54,6 +71,12 @@ export interface User {
   `]
 })
 export class UsersComponent implements OnInit, OnDestroy {
+  private apiService = inject(ApiService);
+  private router = inject(Router);
+  private toast = inject(ToastService);
+  private dialog = inject(MatDialog);
+  private authService = inject(AuthService);
+
   private destroy$ = new Subject<void>();
   private loadUsers$ = new Subject<void>();
 
@@ -76,36 +99,28 @@ export class UsersComponent implements OnInit, OnDestroy {
     {
       icon: 'visibility',
       label: 'View Details',
-      handler: (user: User) => this.viewUser(user),
+      handler: (user) => this.viewUser(user as User),
       color: 'primary'
     },
     {
       icon: 'edit',
       label: 'Edit',
-      handler: (user: User) => this.editUser(user),
+      handler: (user) => this.editUser(user as User),
       color: 'accent',
-      visible: (user: User) => this.canEditUser(user)
+      visible: (user) => this.canEditUser(user as User)
     },
     {
       icon: 'delete',
       label: 'Delete',
-      handler: (user: User) => this.deleteUser(user),
+      handler: (user) => this.deleteUser(user as User),
       color: 'warn',
-      visible: (user: User) => this.canEditUser(user)
+      visible: (user) => this.canEditUser(user as User)
     }
   ];
 
   private currentFilters: TableFilters = {};
   private currentSort = '';
   private currentSearch = '';
-
-  constructor(
-    private apiService: ApiService,
-    private router: Router,
-    private toast: ToastService,
-    private dialog: MatDialog,
-    private authService: AuthService
-  ) {}
 
   ngOnInit(): void {
     // Set up loading stream to prevent race conditions
@@ -120,7 +135,7 @@ export class UsersComponent implements OnInit, OnDestroy {
             sort: this.currentSort || 'createdAt,desc',
             ...this.currentFilters
           };
-          return this.apiService.get<any>('/users', params);
+          return this.apiService.get<UsersResponse>('/users', params);
         })
       )
       .subscribe({
@@ -181,7 +196,8 @@ export class UsersComponent implements OnInit, OnDestroy {
   onFiltersChange(filters: TableFilters): void {
     // Extract search for client-side filtering; keep other filters (e.g., from/to) for server
     this.currentSearch = (filters.search || '').trim();
-    const { search, ...rest } = filters;
+    const rest = { ...filters };
+    delete rest.search;
     this.currentFilters = rest;
     this.pageIndex = 0;
     this.loadUsers();
@@ -286,9 +302,9 @@ export class UsersComponent implements OnInit, OnDestroy {
 
   private updateUser(userData: UserFormData): void {
     // Update editable fields (name, email, and optionally password)
-    const payload: any = {
-      name: userData.name,
-      email: userData.email
+    const payload: UpdateUserPayload = {
+      name: userData.name ?? '',
+      email: userData.email ?? ''
     };
     
     // Include password if provided

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
@@ -145,14 +145,12 @@ import { AuthService, LoginResponse } from '../../../auth/auth.service';
   `]
 })
 export class NavbarComponent implements OnInit, OnDestroy {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
   private destroy$ = new Subject<void>();
   currentUser: LoginResponse | null = null;
   mobileMenuOpen = false;
-
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
 
   ngOnInit(): void {
     this.authService.currentUser$

@@ -2,6 +2,8 @@ package com.mindfit.api.service;
 
 import com.mindfit.api.common.exception.ResourceNotFoundException;
 import com.mindfit.api.common.exception.BadRequestException;
+import com.mindfit.api.common.exception.UnauthorizedException;
+import com.mindfit.api.util.SecurityUtil;
 import com.mindfit.api.dto.LogCreateRequest;
 import com.mindfit.api.dto.LogDto;
 import com.mindfit.api.enums.LogType;
@@ -9,6 +11,7 @@ import com.mindfit.api.model.Log;
 import com.mindfit.api.repository.LogRepository;
 import com.mindfit.api.mapper.LogMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LogService {
@@ -32,10 +36,9 @@ public class LogService {
     }
 
     public Page<LogDto> findAll(String startDate, String endDate, String type, String category, Pageable pageable) {
-        // Authentication temporarily disabled for testing
-        // if (!SecurityUtil.isAdmin()) {
-        //     throw new UnauthorizedException("Only admins can view logs");
-        // }
+        if (!SecurityUtil.isAdmin()) {
+            throw new UnauthorizedException("Only admins can view logs");
+        }
 
         LogType logType = null;
         if (type != null && !type.isBlank()) {
@@ -84,10 +87,9 @@ public class LogService {
     }
 
     public LogDto findById(String id) {
-        // Authentication temporarily disabled for testing
-        // if (!SecurityUtil.isAdmin()) {
-        //     throw new UnauthorizedException("Only admins can view logs");
-        // }
+        if (!SecurityUtil.isAdmin()) {
+            throw new UnauthorizedException("Only admins can view logs");
+        }
         
         Log log = logRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Log not found with id: " + id));
@@ -107,7 +109,7 @@ public class LogService {
             // Create log without admin check for automated logging
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
-            System.err.println("Failed to log API call: " + e.getMessage());
+            log.error("Failed to log API call: {}", e.getMessage(), e);
         }
     }
     
@@ -123,7 +125,7 @@ public class LogService {
             // Create log without admin check for automated logging
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
-            System.err.println("Failed to log error: " + e.getMessage());
+            log.error("Failed to log error: {}", e.getMessage(), e);
         }
     }
     
@@ -139,7 +141,7 @@ public class LogService {
             // Create log without admin check for automated logging
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
-            System.err.println("Failed to log warning: " + e.getMessage());
+            log.error("Failed to log warning: {}", e.getMessage(), e);
         }
     }
 }

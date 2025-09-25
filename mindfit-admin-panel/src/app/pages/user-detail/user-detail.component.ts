@@ -1,15 +1,14 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil, switchMap } from 'rxjs';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatTabsModule, MatTabChangeEvent } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
-
-import { DataTableComponent, TableColumn, TableAction } from '../../shared/components/data-table/data-table.component';
-import { ApiService, PaginationParams } from '../../api/api.service';
+import { DataTableComponent, TableColumn, TableAction, TableFilters } from '../../shared/components/data-table/data-table.component';
+import { ApiService, PaginationParams, PaginatedResponse } from '../../api/api.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { MealFormDialogComponent, MealDialogData, MealFormData } from '../../shared/components/meal-form-dialog/meal-form-dialog.component';
 import { ExerciseFormDialogComponent, ExerciseDialogData, ExerciseFormData } from '../../shared/components/exercise-form-dialog/exercise-form-dialog.component';
@@ -53,6 +52,13 @@ export interface Measurement {
   weightInKG: number;
   heightInCM: number;
   timestamp: string;
+}
+
+export interface MealResponse extends PaginatedResponse<Meal> {}
+export interface ExerciseResponse extends PaginatedResponse<Exercise> {}
+export interface MeasurementResponse extends PaginatedResponse<Measurement> {}
+export interface ProfileGenerationResponse {
+  profile: string;
 }
 
 @Component({
@@ -203,6 +209,12 @@ export interface Measurement {
   `]
 })
 export class UserDetailComponent implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private apiService = inject(ApiService);
+  private toast = inject(ToastService);
+  private dialog = inject(MatDialog);
+
   private destroy$ = new Subject<void>();
   private loadMeals$ = new Subject<PaginationParams>();
   private loadExercises$ = new Subject<PaginationParams>();
@@ -257,27 +269,19 @@ export class UserDetailComponent implements OnInit, OnDestroy {
   ];
 
   mealActions: TableAction[] = [
-    { icon: 'edit', label: 'Edit', handler: (item) => this.editMeal(item) },
-    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteMeal(item), color: 'warn' }
+    { icon: 'edit', label: 'Edit', handler: (item) => this.editMeal(item as Meal) },
+    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteMeal(item as Meal), color: 'warn' }
   ];
 
   exerciseActions: TableAction[] = [
-    { icon: 'edit', label: 'Edit', handler: (item) => this.editExercise(item) },
-    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteExercise(item), color: 'warn' }
+    { icon: 'edit', label: 'Edit', handler: (item) => this.editExercise(item as Exercise) },
+    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteExercise(item as Exercise), color: 'warn' }
   ];
 
   measurementActions: TableAction[] = [
-    { icon: 'edit', label: 'Edit', handler: (item) => this.editMeasurement(item) },
-    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteMeasurement(item), color: 'warn' }
+    { icon: 'edit', label: 'Edit', handler: (item) => this.editMeasurement(item as Measurement) },
+    { icon: 'delete', label: 'Delete', handler: (item) => this.deleteMeasurement(item as Measurement), color: 'warn' }
   ];
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private apiService: ApiService,
-    private toast: ToastService,
-    private dialog: MatDialog
-  ) {}
 
   ngOnInit(): void {
     this.userId = this.route.snapshot.params['id'];
@@ -289,13 +293,13 @@ export class UserDetailComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         switchMap((params) => {
           this.mealsLoading = true;
-          return this.apiService.get<any>(`/users/${this.userId}/meals`, params);
+          return this.apiService.get<MealResponse>(`/users/${this.userId}/meals`, params);
         })
       )
       .subscribe({
         next: (response) => {
           this.meals = response.content || [];
-          this.mealsTotalElements = response.totalElements || 0;
+          this.mealsTotalElements = response.page.totalElements || 0;
           this.mealsLoading = false;
         },
         error: (error) => {
@@ -310,13 +314,13 @@ export class UserDetailComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         switchMap((params) => {
           this.exercisesLoading = true;
-          return this.apiService.get<any>(`/users/${this.userId}/exercises`, params);
+          return this.apiService.get<ExerciseResponse>(`/users/${this.userId}/exercises`, params);
         })
       )
       .subscribe({
         next: (response) => {
           this.exercises = response.content || [];
-          this.exercisesTotalElements = response.totalElements || 0;
+          this.exercisesTotalElements = response.page.totalElements || 0;
           this.exercisesLoading = false;
         },
         error: (error) => {
@@ -331,13 +335,13 @@ export class UserDetailComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         switchMap((params) => {
           this.measurementsLoading = true;
-          return this.apiService.get<any>(`/users/${this.userId}/measurements`, params);
+          return this.apiService.get<MeasurementResponse>(`/users/${this.userId}/measurements`, params);
         })
       )
       .subscribe({
         next: (response) => {
           this.measurements = response.content || [];
-          this.measurementsTotalElements = response.totalElements || 0;
+          this.measurementsTotalElements = response.page.totalElements || 0;
           this.measurementsLoading = false;
         },
         error: (error) => {
@@ -368,7 +372,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
       });
   }
 
-  onTabChange(event: any): void {
+  onTabChange(event: MatTabChangeEvent): void {
     const tabIndex = event.index;
     switch (tabIndex) {
       case 0: // Meals
@@ -440,7 +444,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     this.loadMeasurements();
   }
 
-  onMealsFiltersChange(filters: any): void {
+  onMealsFiltersChange(filters: TableFilters): void {
     // Apply date filters to meals
     const params: PaginationParams = {
       page: 0, // Reset to first page
@@ -459,7 +463,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     this.loadMealsWithParams(params);
   }
 
-  onExercisesFiltersChange(filters: any): void {
+  onExercisesFiltersChange(filters: TableFilters): void {
     // Apply date filters to exercises
     const params: PaginationParams = {
       page: 0, // Reset to first page
@@ -478,7 +482,7 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     this.loadExercisesWithParams(params);
   }
 
-  onMeasurementsFiltersChange(filters: any): void {
+  onMeasurementsFiltersChange(filters: TableFilters): void {
     // Apply date filters to measurements
     const params: PaginationParams = {
       page: 0, // Reset to first page
@@ -729,10 +733,10 @@ export class UserDetailComponent implements OnInit, OnDestroy {
     
     const payload = { observations };
     
-    this.apiService.post(`/users/${this.userId}/generate-profile`, payload)
+    this.apiService.post<ProfileGenerationResponse>(`/users/${this.userId}/generate-profile`, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response: any) => {
+        next: (response) => {
           this.generatingProfile = false;
           this.toast.success('AI profile generated successfully');
           

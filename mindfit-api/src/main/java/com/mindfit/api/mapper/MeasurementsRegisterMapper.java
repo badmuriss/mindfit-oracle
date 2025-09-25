@@ -18,6 +18,9 @@ public interface MeasurementsRegisterMapper {
     @Mapping(target = "createdAt", ignore = true)
     MeasurementsRegister toEntity(MeasurementsRegisterCreateRequest request);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateEntity(MeasurementsRegisterUpdateRequest request, @MappingTarget MeasurementsRegister measurementsRegister);
 
     MeasurementsRegisterResponse toResponse(MeasurementsRegister measurementsRegister);
@@ -26,5 +29,8 @@ public interface MeasurementsRegisterMapper {
 
     MeasurementsRegisterDto toDto(MeasurementsRegister measurementsRegister);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "userId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     MeasurementsRegister toEntity(MeasurementsRegisterDto dto);
 }

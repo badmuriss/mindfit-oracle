@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
@@ -122,19 +122,19 @@ export interface ChatMessage {
   `]
 })
 export class ChatbotComponent implements OnInit, OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private fb = inject(FormBuilder);
+  private apiService = inject(ApiService);
+  private toast = inject(ToastService);
+
   private destroy$ = new Subject<void>();
   userId!: string;
   chatForm: FormGroup;
   messages: ChatMessage[] = [];
   isLoading = false;
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private fb: FormBuilder,
-    private apiService: ApiService,
-    private toast: ToastService
-  ) {
+  constructor() {
     this.chatForm = this.fb.group({
       prompt: ['', [Validators.required, Validators.minLength(1)]]
     });

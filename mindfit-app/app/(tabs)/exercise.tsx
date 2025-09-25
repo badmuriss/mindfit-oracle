@@ -16,7 +16,7 @@ import {
 import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
-import { nowAsLocalTime, formatUTCToLocalDateTime, nowUTC, localTimeAsUTC } from '../../utils/dateUtils';
+import { nowAsLocalTime, formatUTCToLocalDateTime, localTimeAsUTC } from '../../utils/dateUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
 

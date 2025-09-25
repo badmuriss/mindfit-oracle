@@ -33,6 +33,10 @@ public abstract class UserMapper {
     @Mapping(target = "accountNonLocked", ignore = true)
     @Mapping(target = "credentialsNonExpired", ignore = true)
     @Mapping(target = "authorities", ignore = true)
+    @Mapping(target = "mealRecommendationsCache", ignore = true)
+    @Mapping(target = "mealCacheExpiry", ignore = true)
+    @Mapping(target = "workoutRecommendationsCache", ignore = true)
+    @Mapping(target = "workoutCacheExpiry", ignore = true)
     public abstract User toEntity(UserSignupRequest request);
 
     @Mapping(target = "password", source = "password", qualifiedByName = "encodePassword")
@@ -46,6 +50,10 @@ public abstract class UserMapper {
     @Mapping(target = "accountNonLocked", ignore = true)
     @Mapping(target = "credentialsNonExpired", ignore = true)
     @Mapping(target = "authorities", ignore = true)
+    @Mapping(target = "mealRecommendationsCache", ignore = true)
+    @Mapping(target = "mealCacheExpiry", ignore = true)
+    @Mapping(target = "workoutRecommendationsCache", ignore = true)
+    @Mapping(target = "workoutCacheExpiry", ignore = true)
     public abstract void updateEntity(UserUpdateRequest request, @MappingTarget User user);
 
     public abstract UserResponse toResponse(User user);
@@ -64,5 +72,9 @@ public abstract class UserMapper {
     @Mapping(target = "accountNonLocked", ignore = true)
     @Mapping(target = "credentialsNonExpired", ignore = true)
     @Mapping(target = "authorities", ignore = true)
+    @Mapping(target = "mealRecommendationsCache", ignore = true)
+    @Mapping(target = "mealCacheExpiry", ignore = true)
+    @Mapping(target = "workoutRecommendationsCache", ignore = true)
+    @Mapping(target = "workoutCacheExpiry", ignore = true)
     public abstract User toEntity(UserDto dto);
 }
