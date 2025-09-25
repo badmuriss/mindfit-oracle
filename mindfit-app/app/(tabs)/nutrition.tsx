@@ -723,7 +723,7 @@ export default function NutritionScreen() {
                             onPress={() => applyRecommendation(rec)}
                           >
                             <Text style={styles.recommendationName}>{rec.name}</Text>
-                            <Text style={styles.recommendationDescription} numberOfLines={2}>
+                            <Text style={styles.recommendationDescription}>
                               {rec.description}
                             </Text>
                             <View style={styles.macroRow}>

@@ -1072,7 +1072,13 @@ export default function ExploreScreen() {
                       <View style={styles.cardHeader}>
                         <MaterialCommunityIcons name="star" size={24} color="#22c55e" />
                         <TouchableOpacity onPress={() => { setSelectedWorkout(item); setDetailsModalVisible(true); }}>
-                          <Text style={styles.cardTitle}>{item.name}</Text>
+                          <Text
+                            style={styles.cardTitle}
+                            numberOfLines={screenWidth <= 400 ? 2 : 1}
+                            ellipsizeMode={screenWidth <= 400 ? 'tail' : 'middle'}
+                            >
+                            {item.name}
+                          </Text>
                         </TouchableOpacity>
                       </View>
                       <Text style={styles.cardSubtitle}>{item.description}</Text>
