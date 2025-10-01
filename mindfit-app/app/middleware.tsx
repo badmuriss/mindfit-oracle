@@ -29,7 +29,6 @@ export default function Middleware({ children }: { children: React.ReactNode }) 
       // Verify token with API if user is logged in and hasn't been verified yet
       if (token && userId && isProtected && !hasVerified.current) {
         hasVerified.current = true;
-        console.log('Middleware: Verifying token with API...');
 
         try {
           const response = await fetch(API_ENDPOINTS.USERS.PROFILE(userId), {
@@ -48,7 +47,6 @@ export default function Middleware({ children }: { children: React.ReactNode }) 
             return;
           }
 
-          console.log('Middleware: Token verified successfully');
         } catch (error) {
           console.error('Middleware: Error verifying token:', error);
           // On network error, allow access (offline mode)

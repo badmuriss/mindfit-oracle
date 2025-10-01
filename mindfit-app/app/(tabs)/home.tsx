@@ -83,10 +83,7 @@ const HomeScreen = () => {
         }));
       
       setWeightHistory(weightHistoryData);
-      
-      // Debug: log para verificar os dados
-      console.log('Weight history loaded:', weightHistoryData);
-      
+            
       const latest = items[0];
       setWeightKg(latest.weightInKG ?? null);
       setHeightCm(latest.heightInCM ?? null);

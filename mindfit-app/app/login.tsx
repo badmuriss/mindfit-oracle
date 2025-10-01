@@ -41,26 +41,12 @@ export default function LoginScreen() {
     }
 
     try {
-      console.log('Enviando login para API...');
         const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      console.log('Resposta da API:', data);
-      try {
-        if (data && typeof data === 'object') {
-          console.log('API response top-level keys:', Object.keys(data));
-          if (data.user && typeof data.user === 'object') {
-            console.log('API response data.user keys:', Object.keys(data.user));
-          }
-        } else {
-          console.log('API response is not an object:', data);
-        }
-      } catch (e) {
-        console.log('Error while logging API response keys:', e);
-      }
 
       if (response.ok && data.token) {
         showMessage({
@@ -74,12 +60,10 @@ export default function LoginScreen() {
   const possibleName = data.name || (data.user && data.user.name) || data.fullName || data.username || null;
   const possibleEmail = data.email || (data.user && data.user.email) || data.userEmail || null;
   if (possibleName) {
-    console.log('Saving user name from login:', possibleName);
     setUserName(possibleName);
     await AsyncStorage.setItem('userName', possibleName);
   }
   if (possibleEmail) {
-    console.log('Saving user email from login:', possibleEmail);
     setUserEmail(possibleEmail);
     await AsyncStorage.setItem('userEmail', possibleEmail);
   }
@@ -87,7 +71,6 @@ export default function LoginScreen() {
   // Save userId if available
   const possibleUserId = data.id || (data.user && data.user.id) || null;
   if (possibleUserId) {
-    console.log('Saving userId from login:', possibleUserId);
     setUserId(possibleUserId);
     await AsyncStorage.setItem('userId', possibleUserId);
   }
@@ -101,7 +84,6 @@ export default function LoginScreen() {
       });
       if (profileResp.ok) {
         const profile = await profileResp.json();
-        console.log('Fetched user profile after login:', profile);
         if (profile.name) {
           setUserName(profile.name);
           await AsyncStorage.setItem('userName', profile.name);
@@ -110,9 +92,7 @@ export default function LoginScreen() {
           setUserEmail(profile.email);
           await AsyncStorage.setItem('userEmail', profile.email);
         }
-      } else {
-        console.log('Failed to fetch profile after login, status:', profileResp.status);
-      }
+      } 
     } catch (err) {
       console.log('Error fetching profile after login:', err);
     }

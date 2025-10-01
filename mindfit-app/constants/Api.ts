@@ -32,9 +32,6 @@ const USDA_API_KEY: string = pickString(resolvedUsdaFromExpo, resolvedUsdaFromEn
 
 const baseUrl = API_BASE_URL;
 
-// These logs help in dev, but avoid dumping giant objects
-console.log('API_BASE_URL resolved:', API_BASE_URL);
-
 export { API_BASE_URL, USDA_API_KEY };
 
 export const API_ENDPOINTS = {

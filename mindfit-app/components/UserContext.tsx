@@ -46,21 +46,17 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (storedToken) setToken(storedToken);
       if (storedName) {
-        console.log('Loaded userName from storage:', storedName);
         setUserName(storedName);
       }
       if (storedEmail) {
-        console.log('Loaded userEmail from storage:', storedEmail);
         setUserEmail(storedEmail);
       }
       if (storedUserId) {
-        console.log('Loaded userId from storage:', storedUserId);
         setUserId(storedUserId);
       }
       setLoading(false);
     };
     loadToken();
-    console.log('UserProvider mounted');
   }, []);
 
   const logout = async () => {

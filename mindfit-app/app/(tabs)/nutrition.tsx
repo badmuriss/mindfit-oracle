@@ -372,7 +372,6 @@ export default function NutritionScreen() {
   };
 
   const openEdit = (m: Meal) => {
-    console.log(nowUTC())
     setIsEditing(true);
     setEditingId((m.apiId || m.id) ?? null);
     setName(m.name);
@@ -392,7 +391,6 @@ export default function NutritionScreen() {
   };
 
   const handleDelete = (m: Meal) => {
-    console.log('handleDelete called for meal', m?.name, m?.id, m?.apiId);
     setMealToDelete(m);
     setConfirmDeleteVisible(true);
   };

@@ -20,8 +20,6 @@ const resolvedFromEnv = pickString(process.env.EXPO_PUBLIC_USDA_API_KEY, process
 const USDA_API_KEY: string = pickString(resolvedFromExpo, resolvedFromEnv) || 'DEMO_KEY';
 const USDA_BASE_URL = 'https://api.nal.usda.gov/fdc/v1';
 
-console.log('USDA API Key resolved:', USDA_API_KEY === 'DEMO_KEY' ? 'DEMO_KEY' : 'Custom Key');
-
 // Cache configuration
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const CACHE_PREFIX = 'usda_cache_';
@@ -200,7 +198,6 @@ export async function searchUSDAFoods(params: USDASearchParams): Promise<USDASea
   // Try to get cached data first
   const cachedData = await getCachedData(cacheKey);
   if (cachedData) {
-    console.log('Returning cached USDA search results');
     return cachedData;
   }
 
@@ -236,7 +233,6 @@ export async function searchUSDAFoods(params: USDASearchParams): Promise<USDASea
 
     if (response.status === 429) {
       // Rate limit exceeded, wait and retry
-      console.log('Rate limit exceeded, waiting before retry...');
       await new Promise(resolve => setTimeout(resolve, 2000));
       throw new Error('Rate limit exceeded, please try again');
     }
@@ -390,7 +386,6 @@ export async function clearUSDACache(): Promise<void> {
     const keys = await AsyncStorage.getAllKeys();
     const usdaKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
     await AsyncStorage.multiRemove(usdaKeys);
-    console.log('USDA cache cleared');
   } catch (error) {
     console.error('Error clearing cache:', error);
   }
