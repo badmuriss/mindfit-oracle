@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { showMessage } from 'react-native-flash-message';
+import { useRouter } from 'expo-router';
 
 interface UserContextType {
   token: string | null;
@@ -19,6 +20,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [userNameState, setUserNameState] = useState<string | null>(null);
   const setUserName = (name: string | null) => {
@@ -37,32 +39,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const loadToken = async () => {
-      // Se ambiente de desenvolvimento, força login
-      // if (__DEV__) {
-      //   setToken('dev-token-12345');
-      //   setUserName('Gabriel Freitas');
-      //   setUserEmail('gabriel.freitas@mindfit.com');
-      //   setUserId('dev-user-001');
-        
-      //   // Adicionar dados fictícios no AsyncStorage para simular dados salvos
-      //   await AsyncStorage.multiSet([
-      //     ['userToken', 'dev-token-12345'],
-      //     ['userName', 'Gabriel Freitas'],
-      //     ['userEmail', 'gabriel.freitas@mindfit.com'],
-      //     ['userId', 'dev-user-001'],
-      //   ]);
-        
-      //   console.log('🔧 DEV MODE: Usuário fictício logado automaticamente');
-      //   console.log('📊 DEV MODE: Dados de exemplo carregados');
-        
-      //   setLoading(false);
-      //   return;
-      // }
-      // ...código original para produção...
       const storedToken = await AsyncStorage.getItem('userToken');
       const storedName = await AsyncStorage.getItem('userName');
       const storedEmail = await AsyncStorage.getItem('userEmail');
       const storedUserId = await AsyncStorage.getItem('userId');
+
       if (storedToken) setToken(storedToken);
       if (storedName) {
         console.log('Loaded userName from storage:', storedName);
@@ -85,22 +66,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       console.log('Starting logout process...');
-      
+
       // Limpar AsyncStorage
       await AsyncStorage.multiRemove(['userToken', 'userName', 'userEmail', 'userId']);
-      
+
       // Limpar estado de forma síncrona
       setToken(null);
       setUserName(null);
       setUserEmail(null);
       setUserId(null);
-      
+
       console.log('Logout completed successfully');
       showMessage({ message: 'Logout realizado.', type: 'success' });
-      
-      // Pequeno delay para garantir que o estado seja atualizado
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+
+      // Redirect to login
+      router.replace('/login');
+
     } catch (error) {
       console.error('Erro durante logout:', error);
       // Mesmo com erro, limpar o estado local
@@ -109,6 +90,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUserEmail(null);
       setUserId(null);
       showMessage({ message: 'Logout realizado (com avisos).', type: 'warning' });
+      router.replace('/login');
     }
   };
 
