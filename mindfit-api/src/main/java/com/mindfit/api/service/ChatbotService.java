@@ -24,6 +24,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
@@ -539,7 +540,8 @@ public class ChatbotService {
                     "Adicionar Treino Recomendado",
                     "Toque para adicionar este treino à sua coleção",
                     workout,
-                    null
+                    null,
+                        null
                 );
                 actions.add(action);
             }
@@ -573,7 +575,8 @@ public class ChatbotService {
                     "Adicionar Refeição Recomendada",
                     "Toque para adicionar esta refeição à sua coleção",
                     null,
-                    meal
+                    meal,
+                    null
                 );
                 actions.add(action);
             }
@@ -600,9 +603,9 @@ public class ChatbotService {
     public void executeRecommendationAction(String userId, RecommendationAction action) {
         try {
             if ("ADD_WORKOUT".equals(action.type()) && action.workoutData() != null) {
-                executeWorkoutAction(userId, action.workoutData());
+                executeWorkoutAction(userId, action.workoutData(), action.timestamp());
             } else if ("ADD_MEAL".equals(action.type()) && action.mealData() != null) {
-                executeMealAction(userId, action.mealData());
+                executeMealAction(userId, action.mealData(), action.timestamp());
             } else {
                 throw new IllegalArgumentException("Invalid action type or missing data");
             }
@@ -612,13 +615,13 @@ public class ChatbotService {
         }
     }
 
-    private void executeWorkoutAction(String userId, WorkoutRecommendationData workoutData) {
+    private void executeWorkoutAction(String userId, WorkoutRecommendationData workoutData, LocalDateTime timestamp) {
         try {
             // Create exercise record using existing service
             var exerciseRequest = new ExerciseRegisterCreateRequest(
                 workoutData.name(),
                 workoutData.description(),
-                java.time.LocalDateTime.now(), // current timestamp
+                timestamp,
                 workoutData.durationInMinutes(),
                 workoutData.caloriesBurnt()
             );
@@ -630,12 +633,12 @@ public class ChatbotService {
         }
     }
 
-    private void executeMealAction(String userId, MealRecommendationData mealData) {
+    private void executeMealAction(String userId, MealRecommendationData mealData, LocalDateTime timestamp) {
         try {
             // Create meal record using existing service
             var mealRequest = new MealRegisterCreateRequest(
                 mealData.name(),
-                java.time.LocalDateTime.now(), // current timestamp
+                timestamp,
                 mealData.calories(),
                 mealData.carbo(),
                 mealData.protein(),

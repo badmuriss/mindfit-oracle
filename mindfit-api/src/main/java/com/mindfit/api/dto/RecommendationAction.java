@@ -1,9 +1,22 @@
 package com.mindfit.api.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
+import java.time.LocalDateTime;
+
 public record RecommendationAction(
-        String type, // "ADD_WORKOUT" or "ADD_MEAL"
+
+        @NotBlank
+        String type,
+
+        @NotBlank
         String title,
+
         String description,
-        WorkoutRecommendationData workoutData, // Optional
-        MealRecommendationData mealData // Optional
+
+        WorkoutRecommendationData workoutData,
+
+        MealRecommendationData mealData,
+
+        LocalDateTime timestamp
 ) {}

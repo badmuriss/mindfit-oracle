@@ -545,28 +545,20 @@ export default function NutritionScreen() {
             <Text style={styles.caloriesValue}>{totalCalories.toLocaleString('pt-BR')} kcal</Text>
           </View>
         </View>
-        {(totalCarbs > 0 || totalProtein > 0 || totalFat > 0) && (
-          <View style={styles.macrosSummary}>
-            {totalCarbs > 0 && (
-              <View style={styles.macroItem}>
-                <Text style={styles.macroLabel}>Carboidratos</Text>
-                <Text style={styles.macroValue}>{totalCarbs.toFixed(1)}g</Text>
-              </View>
-            )}
-            {totalProtein > 0 && (
-              <View style={styles.macroItem}>
-                <Text style={styles.macroLabel}>Proteínas</Text>
-                <Text style={styles.macroValue}>{totalProtein.toFixed(1)}g</Text>
-              </View>
-            )}
-            {totalFat > 0 && (
-              <View style={styles.macroItem}>
-                <Text style={styles.macroLabel}>Gorduras</Text>
-                <Text style={styles.macroValue}>{totalFat.toFixed(1)}g</Text>
-              </View>
-            )}
+        <View style={styles.macrosSummary}>
+          <View style={styles.macroItem}>
+            <Text style={styles.macroLabel}>Carboidratos</Text>
+            <Text style={styles.macroValue}>{totalCarbs.toFixed(1)}g</Text>
           </View>
-        )}
+          <View style={styles.macroItem}>
+            <Text style={styles.macroLabel}>Proteínas</Text>
+            <Text style={styles.macroValue}>{totalProtein.toFixed(1)}g</Text>
+          </View>
+          <View style={styles.macroItem}>
+            <Text style={styles.macroLabel}>Gorduras</Text>
+            <Text style={styles.macroValue}>{totalFat.toFixed(1)}g</Text>
+          </View>
+        </View>
       </View>
 
       {/* Day Navigation */}
@@ -792,13 +784,14 @@ export default function NutritionScreen() {
                           </View>
                         ) : (
                           <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                            {/* Refresh Button */}
                             <TouchableOpacity
                               style={styles.refreshButton}
                               onPress={getMealRecommendations}
                               disabled={loadingRecommendations}
                             >
                               <MaterialCommunityIcons name="refresh" size={16} color="#0ea5e9" />
-                              <Text style={styles.refreshButtonText}>Gerar Recomendações</Text>
+                              <Text style={styles.refreshButtonText}>Atualizar Sugestões</Text>
                             </TouchableOpacity>
                             <MaterialCommunityIcons name="silverware-fork-knife" size={64} color="#cbd5e1" style={{ marginTop: 16 }} />
                             <Text style={{
@@ -808,7 +801,7 @@ export default function NutritionScreen() {
                               fontSize: 16,
                               fontWeight: '700',
                             }}>
-                              {recommendationError || 'Nenhuma recomendação disponível'}
+                              {recommendationError || 'Erro ao gerar recomendações'}
                             </Text>
                             <Text style={{
                               color: '#94a3b8',
@@ -817,7 +810,7 @@ export default function NutritionScreen() {
                               fontSize: 14,
                               fontWeight: '500',
                             }}>
-                              Toque em gerar para obter sugestões personalizadas
+                              Toque em atualizar para gerar novamente
                             </Text>
                           </View>
                         )}

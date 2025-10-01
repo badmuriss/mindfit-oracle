@@ -5,6 +5,8 @@ import { showMessage } from 'react-native-flash-message';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
 
+import { nowAsLocalTime } from '../../utils/dateUtils';
+
 const { width: screenWidth } = Dimensions.get('window');
 
 type RecommendationAction = {
@@ -104,10 +106,15 @@ export default function AssistantScreen() {
     }));
 
     try {
+      const payload = {
+        ...action,
+        timestamp: nowAsLocalTime(),
+      };
+
       const resp = await fetch(API_ENDPOINTS.USERS.CHATBOT_ACTIONS(userId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(action),
+        body: JSON.stringify(payload),
       });
 
       if (!resp.ok) {
