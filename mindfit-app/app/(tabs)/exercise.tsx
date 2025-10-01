@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
+import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
 import { nowAsLocalTime, formatUTCToLocalDateTime, localTimeAsUTC } from '../../utils/dateUtils';
@@ -165,6 +166,15 @@ export default function ExploreScreen() {
       loadHistory(selectedHistoryDate);
     }
   }, [selectedHistoryDate, currentTab, loadHistory]);
+
+  // Refetch exercise history when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (currentTab === 'history') {
+        loadHistory(selectedHistoryDate);
+      }
+    }, [currentTab, selectedHistoryDate, loadHistory])
+  );
 
   const handleDeleteHistory = (w: Workout) => {
     setWorkoutToDelete(w);

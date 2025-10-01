@@ -2,12 +2,19 @@ package com.mindfit.api.service;
 
 import com.mindfit.api.dto.ChatRequest;
 import com.mindfit.api.dto.ChatResponse;
+import com.mindfit.api.dto.RecommendationAction;
+import com.mindfit.api.dto.WorkoutRecommendationData;
+import com.mindfit.api.dto.MealRecommendationData;
+import com.mindfit.api.dto.ExerciseRegisterCreateRequest;
+import com.mindfit.api.dto.MealRegisterCreateRequest;
 import com.mindfit.api.model.User;
 import com.mindfit.api.repository.UserRepository;
 import com.mindfit.api.service.LogService;
 import com.mindfit.api.service.MealRegisterService;
 import com.mindfit.api.service.MeasurementsRegisterService;
 import com.mindfit.api.service.ExerciseRegisterService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -17,13 +24,14 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.ArrayList;
 import org.springframework.data.domain.PageRequest;
 
 @Service
@@ -36,6 +44,7 @@ public class ChatbotService {
     private final MealRegisterService mealRegisterService;
     private final MeasurementsRegisterService measurementsRegisterService;
     private final ExerciseRegisterService exerciseRegisterService;
+    private final ObjectMapper objectMapper;
     private final Map<String, Deque<String>> conversations = new ConcurrentHashMap<>();
     private static final int MAX_TURNS = 10; // keep last 10 user-assistant exchanges
 
@@ -106,7 +115,10 @@ public class ChatbotService {
             history.pollFirst(); // remove oldest entry
         }
 
-        return new ChatResponse(concise);
+        // Detect if the user is asking for recommendations and generate actions
+        List<RecommendationAction> actions = detectAndGenerateRecommendations(userId, request.prompt(), concise);
+
+        return new ChatResponse(concise, actions);
     }
 
     public void clearHistory(String userId) {
@@ -307,6 +319,334 @@ public class ChatbotService {
         }
         sb.append(" …");
         return sb.toString();
+    }
+
+    private List<RecommendationAction> detectAndGenerateRecommendations(String userId, String userPrompt, String aiResponse) {
+        try {
+            // Use AI to detect intent and generate recommendations
+            String intentResponse = detectIntentWithAI(userPrompt);
+
+            // Check if response contains JSON (indicates recommendation intent)
+            if (intentResponse != null && intentResponse.trim().startsWith("{")) {
+                // Parse the intent response to determine type
+                IntentDetectionResult intent = parseIntentDetection(intentResponse);
+
+                if (intent != null) {
+                    if ("workout".equalsIgnoreCase(intent.intentType())) {
+                        return generateWorkoutRecommendations(userId, userPrompt);
+                    } else if ("meal".equalsIgnoreCase(intent.intentType())) {
+                        return generateMealRecommendations(userId, userPrompt);
+                    }
+                }
+            }
+
+            return null; // No recommendations detected
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to generate recommendations", e.getMessage());
+            return null;
+        }
+    }
+
+    private String detectIntentWithAI(String userPrompt) {
+        try {
+            StringBuilder intentPrompt = new StringBuilder();
+            intentPrompt.append("Analyze the following user message and determine if they are requesting:\n");
+            intentPrompt.append("1. Workout/exercise recommendations\n");
+            intentPrompt.append("2. Meal/food recommendations\n");
+            intentPrompt.append("3. Neither (just general nutrition/fitness conversation)\n\n");
+            intentPrompt.append("User message: \"").append(userPrompt).append("\"\n\n");
+            intentPrompt.append("If the user IS requesting workout or meal recommendations, respond with JSON:\n");
+            intentPrompt.append("{\"intentType\": \"workout\"} or {\"intentType\": \"meal\"}\n\n");
+            intentPrompt.append("If the user is NOT requesting recommendations, respond with:\n");
+            intentPrompt.append("none\n\n");
+            intentPrompt.append("Respond ONLY with the JSON or \"none\". No additional text.");
+
+            OpenAiChatOptions options = OpenAiChatOptions.builder()
+                    .temperature(0.1)
+                    .maxTokens(50)
+                    .build();
+
+            Prompt prompt = new Prompt(
+                    java.util.List.of(new UserMessage(intentPrompt.toString())),
+                    options
+            );
+
+            org.springframework.ai.chat.model.ChatResponse aiResponse = openAiChatModel.call(prompt);
+            return aiResponse.getResult().getOutput().getText().trim();
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to detect intent with AI", e.getMessage());
+            return null;
+        }
+    }
+
+    private IntentDetectionResult parseIntentDetection(String jsonResponse) {
+        try {
+            String cleanJson = jsonResponse.trim();
+            if (cleanJson.startsWith("```json")) {
+                cleanJson = cleanJson.substring(7);
+            } else if (cleanJson.startsWith("```")) {
+                cleanJson = cleanJson.substring(3);
+            }
+            if (cleanJson.endsWith("```")) {
+                cleanJson = cleanJson.substring(0, cleanJson.length() - 3);
+            }
+            cleanJson = cleanJson.trim();
+
+            return objectMapper.readValue(cleanJson, IntentDetectionResult.class);
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to parse intent detection", e.getMessage());
+            return null;
+        }
+    }
+
+    // Helper record for intent detection
+    private record IntentDetectionResult(String intentType) {}
+
+    private List<RecommendationAction> generateWorkoutRecommendations(String userId, String userPrompt) {
+        try {
+            String recommendationPrompt = buildWorkoutRecommendationPrompt(userId, userPrompt);
+
+            OpenAiChatOptions options = OpenAiChatOptions.builder()
+                    .temperature(0.3)
+                    .maxTokens(400)
+                    .build();
+
+            Prompt prompt = new Prompt(
+                    java.util.List.of(new UserMessage(recommendationPrompt)),
+                    options
+            );
+
+            org.springframework.ai.chat.model.ChatResponse aiResponse = openAiChatModel.call(prompt);
+            String response = aiResponse.getResult().getOutput().getText();
+
+            return parseWorkoutRecommendations(response);
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to generate workout recommendations", e.getMessage());
+            return null;
+        }
+    }
+
+    private List<RecommendationAction> generateMealRecommendations(String userId, String userPrompt) {
+        try {
+            String recommendationPrompt = buildMealRecommendationPrompt(userId, userPrompt);
+
+            OpenAiChatOptions options = OpenAiChatOptions.builder()
+                    .temperature(0.3)
+                    .maxTokens(400)
+                    .build();
+
+            Prompt prompt = new Prompt(
+                    java.util.List.of(new UserMessage(recommendationPrompt)),
+                    options
+            );
+
+            org.springframework.ai.chat.model.ChatResponse aiResponse = openAiChatModel.call(prompt);
+            String response = aiResponse.getResult().getOutput().getText();
+
+            return parseMealRecommendations(response);
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to generate meal recommendations", e.getMessage());
+            return null;
+        }
+    }
+
+    private String buildWorkoutRecommendationPrompt(String userId, String userPrompt) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Gere 1-2 recomendações específicas de treino com base nesta solicitação do usuário: \"")
+              .append(userPrompt).append("\"\n\n");
+
+        // Add user profile context if available
+        String userProfile = getUserProfile(userId);
+        if (userProfile != null && !userProfile.trim().isEmpty()) {
+            prompt.append("Perfil do Usuário: ").append(userProfile).append("\n\n");
+        }
+
+        prompt.append("Retorne APENAS um array JSON com este formato exato:\n")
+              .append("[\n")
+              .append("  {\n")
+              .append("    \"name\": \"Nome do Treino\",\n")
+              .append("    \"description\": \"Breve descrição\",\n")
+              .append("    \"durationInMinutes\": 30,\n")
+              .append("    \"caloriesBurnt\": 250\n")
+              .append("  }\n")
+              .append("]\n\n")
+              .append("Requisitos:\n")
+              .append("- Máximo 2 treinos\n")
+              .append("- Estimativas de calorias realistas\n")
+              .append("- Duração entre 15-90 minutos\n")
+              .append("- Exercícios seguros e apropriados\n")
+              .append("- RESPONDA EM PORTUGUÊS BRASILEIRO\n")
+              .append("- Sem texto explicativo fora do JSON");
+
+        return prompt.toString();
+    }
+
+    private String buildMealRecommendationPrompt(String userId, String userPrompt) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("Gere 1-2 recomendações específicas de refeição com base nesta solicitação do usuário: \"")
+              .append(userPrompt).append("\"\n\n");
+
+        // Add user profile context if available
+        String userProfile = getUserProfile(userId);
+        if (userProfile != null && !userProfile.trim().isEmpty()) {
+            prompt.append("Perfil do Usuário: ").append(userProfile).append("\n\n");
+        }
+
+        prompt.append("Retorne APENAS um array JSON com este formato exato:\n")
+              .append("[\n")
+              .append("  {\n")
+              .append("    \"name\": \"Nome ESPECÍFICO da Refeição com Ingredientes\",\n")
+              .append("    \"calories\": 400,\n")
+              .append("    \"carbo\": 45.0,\n")
+              .append("    \"protein\": 25.0,\n")
+              .append("    \"fat\": 12.0\n")
+              .append("  }\n")
+              .append("]\n\n")
+              .append("Requisitos:\n")
+              .append("- Máximo 2 refeições\n")
+              .append("- IMPORTANTE: O 'name' DEVE ser específico com ingredientes principais\n")
+              .append("- EXEMPLOS DE NOMES CORRETOS: 'Arroz com Frango Grelhado e Brócolis', 'Pão Integral com Frango Desfiado e Alface', 'Salada Caesar com Frango', 'Omelete de 3 Ovos com Queijo e Tomate'\n")
+              .append("- NUNCA use nomes genéricos como 'Jantar Rápido', 'Refeição Pós-Treino', 'Café da Manhã Saudável'\n")
+              .append("- Valores nutricionais realistas baseados nos ingredientes\n")
+              .append("- Macronutrientes balanceados\n")
+              .append("- Calorias entre 150-800 por refeição\n")
+              .append("- Ingredientes comuns e acessíveis brasileiros\n")
+              .append("- RESPONDA EM PORTUGUÊS BRASILEIRO\n")
+              .append("- Sem texto explicativo fora do JSON");
+
+        return prompt.toString();
+    }
+
+    private List<RecommendationAction> parseWorkoutRecommendations(String jsonResponse) {
+        try {
+            // Extract JSON from response (in case there's extra text)
+            String json = extractJson(jsonResponse);
+            if (json == null) return null;
+
+            // Parse JSON array into list of WorkoutRecommendationData
+            TypeReference<List<WorkoutRecommendationData>> typeRef = new TypeReference<List<WorkoutRecommendationData>>() {};
+            List<WorkoutRecommendationData> workouts = objectMapper.readValue(json, typeRef);
+
+            if (workouts == null || workouts.isEmpty()) {
+                return null;
+            }
+
+            // Convert each workout into a RecommendationAction
+            List<RecommendationAction> actions = new ArrayList<>();
+            for (WorkoutRecommendationData workout : workouts) {
+                RecommendationAction action = new RecommendationAction(
+                    "ADD_WORKOUT",
+                    "Adicionar Treino Recomendado",
+                    "Toque para adicionar este treino à sua coleção",
+                    workout,
+                    null
+                );
+                actions.add(action);
+            }
+
+            return actions.isEmpty() ? null : actions;
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to parse workout recommendations", e.getMessage());
+            return null;
+        }
+    }
+
+    private List<RecommendationAction> parseMealRecommendations(String jsonResponse) {
+        try {
+            // Extract JSON from response (in case there's extra text)
+            String json = extractJson(jsonResponse);
+            if (json == null) return null;
+
+            // Parse JSON array into list of MealRecommendationData
+            TypeReference<List<MealRecommendationData>> typeRef = new TypeReference<List<MealRecommendationData>>() {};
+            List<MealRecommendationData> meals = objectMapper.readValue(json, typeRef);
+
+            if (meals == null || meals.isEmpty()) {
+                return null;
+            }
+
+            // Convert each meal into a RecommendationAction
+            List<RecommendationAction> actions = new ArrayList<>();
+            for (MealRecommendationData meal : meals) {
+                RecommendationAction action = new RecommendationAction(
+                    "ADD_MEAL",
+                    "Adicionar Refeição Recomendada",
+                    "Toque para adicionar esta refeição à sua coleção",
+                    null,
+                    meal
+                );
+                actions.add(action);
+            }
+
+            return actions.isEmpty() ? null : actions;
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to parse meal recommendations", e.getMessage());
+            return null;
+        }
+    }
+
+    private String extractJson(String response) {
+        // Find JSON array in the response
+        int start = response.indexOf('[');
+        int end = response.lastIndexOf(']');
+
+        if (start >= 0 && end > start) {
+            return response.substring(start, end + 1);
+        }
+
+        return null;
+    }
+
+    public void executeRecommendationAction(String userId, RecommendationAction action) {
+        try {
+            if ("ADD_WORKOUT".equals(action.type()) && action.workoutData() != null) {
+                executeWorkoutAction(userId, action.workoutData());
+            } else if ("ADD_MEAL".equals(action.type()) && action.mealData() != null) {
+                executeMealAction(userId, action.mealData());
+            } else {
+                throw new IllegalArgumentException("Invalid action type or missing data");
+            }
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to execute recommendation action", e.getMessage());
+            throw new RuntimeException("Failed to execute action: " + e.getMessage());
+        }
+    }
+
+    private void executeWorkoutAction(String userId, WorkoutRecommendationData workoutData) {
+        try {
+            // Create exercise record using existing service
+            var exerciseRequest = new ExerciseRegisterCreateRequest(
+                workoutData.name(),
+                workoutData.description(),
+                java.time.LocalDateTime.now(), // current timestamp
+                workoutData.durationInMinutes(),
+                workoutData.caloriesBurnt()
+            );
+
+            exerciseRegisterService.create(userId, exerciseRequest);
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to save workout recommendation", e.getMessage());
+            throw e;
+        }
+    }
+
+    private void executeMealAction(String userId, MealRecommendationData mealData) {
+        try {
+            // Create meal record using existing service
+            var mealRequest = new MealRegisterCreateRequest(
+                mealData.name(),
+                java.time.LocalDateTime.now(), // current timestamp
+                mealData.calories(),
+                mealData.carbo(),
+                mealData.protein(),
+                mealData.fat()
+            );
+
+            mealRegisterService.create(userId, mealRequest);
+        } catch (Exception e) {
+            logService.logError("CHATBOT_SERVICE", "Failed to save meal recommendation", e.getMessage());
+            throw e;
+        }
     }
 }
 

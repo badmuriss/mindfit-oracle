@@ -4,6 +4,7 @@ import com.mindfit.api.enums.Role;
 import com.mindfit.api.common.exception.UnauthorizedException;
 import com.mindfit.api.dto.ChatRequest;
 import com.mindfit.api.dto.ChatResponse;
+import com.mindfit.api.dto.RecommendationAction;
 import com.mindfit.api.service.ChatbotService;
 import com.mindfit.api.util.SecurityUtil;
 import com.mindfit.api.service.RateLimitService;
@@ -57,5 +58,28 @@ public class ChatbotController {
             throw new UnauthorizedException("Users can only clear their own chatbot history");
         }
         chatbotService.clearHistory(userId);
+    }
+
+    @PostMapping("/actions/execute")
+    @Operation(summary = "Execute a recommendation action (add workout or meal)")
+    public void executeAction(
+            @PathVariable String userId,
+            @Valid @RequestBody RecommendationAction action) {
+
+        if (!SecurityUtil.isAdmin() && !userId.equals(SecurityUtil.getCurrentUserId())) {
+            throw new UnauthorizedException("Users can only execute their own actions");
+        }
+
+        Bucket bucket = rateLimitService.createBucketForUser(userId);
+        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+
+        if (!probe.isConsumed()) {
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Rate limit exceeded. Try again in " + probe.getNanosToWaitForRefill() / 1_000_000_000 + " seconds"
+            );
+        }
+
+        chatbotService.executeRecommendationAction(userId, action);
     }
 }

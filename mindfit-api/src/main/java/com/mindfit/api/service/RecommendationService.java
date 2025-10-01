@@ -3,6 +3,9 @@ package com.mindfit.api.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mindfit.api.common.exception.JsonParsingException;
+import com.mindfit.api.common.exception.RecommendationException;
+import com.mindfit.api.common.exception.ResourceNotFoundException;
 import com.mindfit.api.dto.*;
 import com.mindfit.api.model.User;
 import com.mindfit.api.repository.UserRepository;
@@ -31,101 +34,85 @@ public class RecommendationService {
     private final ObjectMapper objectMapper;
 
     public MealRecommendationResponse recommendMeal(String userId, MealRecommendationRequest request) {
-        try {
-            User user = userRepository.findById(userId).orElse(null);
-            if (user == null) {
-                return MealRecommendationResponse.builder()
-                        .recommendations(List.of())
-                        .reasoning("User not found")
-                        .build();
-            }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-            String mealPrompt = buildMealPrompt(user, request);
+        String mealPrompt = buildMealPrompt(user, request);
 
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .temperature(0.3)
-                    .maxTokens(1200)
-                    .build();
+        OpenAiChatOptions options = OpenAiChatOptions.builder()
+                .temperature(0.3)
+                .maxTokens(1200)
+                .build();
 
-            Prompt prompt = new Prompt(
-                    List.of(new UserMessage(mealPrompt)),
-                    options
-            );
+        Prompt prompt = new Prompt(
+                List.of(new UserMessage(mealPrompt)),
+                options
+        );
 
-            var aiResponse = openAiChatModel.call(prompt);
-            String response = aiResponse.getResult().getOutput().getText();
+        var aiResponse = openAiChatModel.call(prompt);
+        String response = aiResponse.getResult().getOutput().getText();
 
-            MealRecommendationResponse mealResponse = parseMealRecommendation(response);
+        MealRecommendationResponse mealResponse = parseMealRecommendation(response);
 
-            // Save to cache for future requests (store in user entity)
-            try {
-                String cacheJson = objectMapper.writeValueAsString(mealResponse);
-                user.setMealRecommendationsCache(cacheJson);
-                user.setMealCacheExpiry(LocalDateTime.now().plusHours(2)); // 2-hour expiry
-                userRepository.save(user);
-                logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_SAVE", "Saved meal recommendation to cache for user: " + userId);
-            } catch (Exception e) {
-                logService.logError("RECOMMENDATION_SERVICE", "Failed to save meal recommendation to cache", e.getMessage());
-            }
-
-            return mealResponse;
-
-        } catch (Exception e) {
-            logService.logError("RECOMMENDATION_SERVICE", "Failed to generate meal recommendation", e.getMessage());
-            return MealRecommendationResponse.builder()
-                    .recommendations(List.of())
-                    .reasoning("Failed to generate recommendation: " + e.getMessage())
-                    .build();
+        // Validate recommendations are not empty
+        if (mealResponse.recommendations() == null || mealResponse.recommendations().isEmpty()) {
+            throw new RecommendationException("No meal recommendations were generated. Please try again.");
         }
+
+        // Save to cache for future requests (store in user entity)
+        try {
+            String cacheJson = objectMapper.writeValueAsString(mealResponse);
+            user.setMealRecommendationsCache(cacheJson);
+            user.setMealCacheExpiry(LocalDateTime.now().plusHours(2)); // 2-hour expiry
+            userRepository.save(user);
+            logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_SAVE", "Saved meal recommendation to cache for user: " + userId);
+        } catch (Exception e) {
+            logService.logError("RECOMMENDATION_SERVICE", "Failed to save meal recommendation to cache", e.getMessage());
+            // Don't throw, cache failure is not critical
+        }
+
+        return mealResponse;
     }
 
     public WorkoutRecommendationResponse recommendWorkout(String userId, WorkoutRecommendationRequest request) {
-        try {
-            User user = userRepository.findById(userId).orElse(null);
-            if (user == null) {
-                return WorkoutRecommendationResponse.builder()
-                        .recommendations(List.of())
-                        .reasoning("User not found")
-                        .build();
-            }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-            String workoutPrompt = buildWorkoutPrompt(user, request);
+        String workoutPrompt = buildWorkoutPrompt(user, request);
 
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                    .temperature(0.3)
-                    .maxTokens(1300)
-                    .build();
+        OpenAiChatOptions options = OpenAiChatOptions.builder()
+                .temperature(0.3)
+                .maxTokens(1300)
+                .build();
 
-            Prompt prompt = new Prompt(
-                    List.of(new UserMessage(workoutPrompt)),
-                    options
-            );
+        Prompt prompt = new Prompt(
+                List.of(new UserMessage(workoutPrompt)),
+                options
+        );
 
-            var aiResponse = openAiChatModel.call(prompt);
-            String response = aiResponse.getResult().getOutput().getText();
+        var aiResponse = openAiChatModel.call(prompt);
+        String response = aiResponse.getResult().getOutput().getText();
 
-            WorkoutRecommendationResponse workoutResponse = parseWorkoutRecommendation(response);
+        WorkoutRecommendationResponse workoutResponse = parseWorkoutRecommendation(response);
 
-            // Save to cache for future requests (store in user entity)
-            try {
-                String cacheJson = objectMapper.writeValueAsString(workoutResponse);
-                user.setWorkoutRecommendationsCache(cacheJson);
-                user.setWorkoutCacheExpiry(LocalDateTime.now().plusHours(2)); // 2-hour expiry
-                userRepository.save(user);
-                logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_SAVE", "Saved workout recommendation to cache for user: " + userId);
-            } catch (Exception e) {
-                logService.logError("RECOMMENDATION_SERVICE", "Failed to save workout recommendation to cache", e.getMessage());
-            }
-
-            return workoutResponse;
-
-        } catch (Exception e) {
-            logService.logError("RECOMMENDATION_SERVICE", "Failed to generate workout recommendation", e.getMessage());
-            return WorkoutRecommendationResponse.builder()
-                    .recommendations(List.of())
-                    .reasoning("Failed to generate recommendation: " + e.getMessage())
-                    .build();
+        // Validate recommendations are not empty
+        if (workoutResponse.recommendations() == null || workoutResponse.recommendations().isEmpty()) {
+            throw new RecommendationException("No workout recommendations were generated. Please try again.");
         }
+
+        // Save to cache for future requests (store in user entity)
+        try {
+            String cacheJson = objectMapper.writeValueAsString(workoutResponse);
+            user.setWorkoutRecommendationsCache(cacheJson);
+            user.setWorkoutCacheExpiry(LocalDateTime.now().plusHours(2)); // 2-hour expiry
+            userRepository.save(user);
+            logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_SAVE", "Saved workout recommendation to cache for user: " + userId);
+        } catch (Exception e) {
+            logService.logError("RECOMMENDATION_SERVICE", "Failed to save workout recommendation to cache", e.getMessage());
+            // Don't throw, cache failure is not critical
+        }
+
+        return workoutResponse;
     }
 
     private String buildMealPrompt(User user, MealRecommendationRequest request) {
@@ -325,23 +312,23 @@ public class RecommendationService {
     }
 
     private MealRecommendationResponse parseMealRecommendation(String jsonResponse) {
+        // Clean up the response to ensure it's valid JSON
+        String cleanJson = cleanupJsonResponse(jsonResponse);
+
+        // Validate JSON structure before parsing
+        if (!isValidJsonStructure(cleanJson)) {
+            logService.logError("RECOMMENDATION_SERVICE", "Invalid JSON structure detected", cleanJson);
+            throw new JsonParsingException("Invalid JSON structure received from AI");
+        }
+
         try {
-            // Clean up the response to ensure it's valid JSON
-            String cleanJson = cleanupJsonResponse(jsonResponse);
-
-            // Validate JSON structure before parsing
-            if (!isValidJsonStructure(cleanJson)) {
-                logService.logError("RECOMMENDATION_SERVICE", "Invalid JSON structure detected", cleanJson);
-                throw new JsonProcessingException("Invalid JSON structure") {};
-            }
-
             TypeReference<MealRecommendationResponse> typeRef = new TypeReference<MealRecommendationResponse>() {};
             MealRecommendationResponse response = objectMapper.readValue(cleanJson, typeRef);
 
             // Validate the parsed response has required fields
             if (response.recommendations() == null || response.recommendations().isEmpty()) {
                 logService.logError("RECOMMENDATION_SERVICE", "Parsed response has no recommendations", cleanJson);
-                throw new JsonProcessingException("No recommendations in response") {};
+                throw new JsonParsingException("No recommendations in AI response");
             }
 
             return response;
@@ -349,32 +336,28 @@ public class RecommendationService {
         } catch (JsonProcessingException e) {
             logService.logError("RECOMMENDATION_SERVICE", "Failed to parse meal recommendation JSON",
                 "Error: " + e.getMessage() + ", Response: " + jsonResponse);
-
-            return MealRecommendationResponse.builder()
-                    .recommendations(List.of())
-                    .reasoning("Unable to parse AI response. Please try again.")
-                    .build();
+            throw new JsonParsingException("Unable to parse AI response. Please try again.", e);
         }
     }
 
     private WorkoutRecommendationResponse parseWorkoutRecommendation(String jsonResponse) {
+        // Clean up the response to ensure it's valid JSON
+        String cleanJson = cleanupJsonResponse(jsonResponse);
+
+        // Validate JSON structure before parsing
+        if (!isValidJsonStructure(cleanJson)) {
+            logService.logError("RECOMMENDATION_SERVICE", "Invalid JSON structure detected", cleanJson);
+            throw new JsonParsingException("Invalid JSON structure received from AI");
+        }
+
         try {
-            // Clean up the response to ensure it's valid JSON
-            String cleanJson = cleanupJsonResponse(jsonResponse);
-
-            // Validate JSON structure before parsing
-            if (!isValidJsonStructure(cleanJson)) {
-                logService.logError("RECOMMENDATION_SERVICE", "Invalid JSON structure detected", cleanJson);
-                throw new JsonProcessingException("Invalid JSON structure") {};
-            }
-
             TypeReference<WorkoutRecommendationResponse> typeRef = new TypeReference<WorkoutRecommendationResponse>() {};
             WorkoutRecommendationResponse response = objectMapper.readValue(cleanJson, typeRef);
 
             // Validate the parsed response has required fields
             if (response.recommendations() == null || response.recommendations().isEmpty()) {
                 logService.logError("RECOMMENDATION_SERVICE", "Parsed response has no recommendations", cleanJson);
-                throw new JsonProcessingException("No recommendations in response") {};
+                throw new JsonParsingException("No recommendations in AI response");
             }
 
             return response;
@@ -382,11 +365,7 @@ public class RecommendationService {
         } catch (JsonProcessingException e) {
             logService.logError("RECOMMENDATION_SERVICE", "Failed to parse workout recommendation JSON",
                 "Error: " + e.getMessage() + ", Response: " + jsonResponse);
-
-            return WorkoutRecommendationResponse.builder()
-                    .recommendations(List.of())
-                    .reasoning("Unable to parse AI response. Please try again.")
-                    .build();
+            throw new JsonParsingException("Unable to parse AI response. Please try again.", e);
         }
     }
 
@@ -396,45 +375,31 @@ public class RecommendationService {
      * @return Cached or freshly generated meal recommendations
      */
     public MealRecommendationResponse getCachedMealRecommendations(String userId) {
-        try {
-            User user = userRepository.findById(userId).orElse(null);
-            if (user == null) {
-                return MealRecommendationResponse.builder()
-                        .recommendations(List.of())
-                        .reasoning("User not found")
-                        .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Check if cache is valid (exists and not expired)
+        if (user.getMealRecommendationsCache() != null &&
+            user.getMealCacheExpiry() != null &&
+            LocalDateTime.now().isBefore(user.getMealCacheExpiry())) {
+
+            try {
+                // Deserialize cached recommendations
+                MealRecommendationResponse cachedResponse = objectMapper.readValue(
+                    user.getMealRecommendationsCache(),
+                    MealRecommendationResponse.class
+                );
+                logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_HIT", "Retrieved meal recommendations from cache for user: " + userId);
+                return cachedResponse;
+            } catch (JsonProcessingException e) {
+                logService.logError("RECOMMENDATION_SERVICE", "Failed to deserialize cached meal recommendations", e.getMessage());
+                // Fall through to generate new recommendations
             }
-
-            // Check if cache is valid (exists and not expired)
-            if (user.getMealRecommendationsCache() != null &&
-                user.getMealCacheExpiry() != null &&
-                LocalDateTime.now().isBefore(user.getMealCacheExpiry())) {
-
-                try {
-                    // Deserialize cached recommendations
-                    MealRecommendationResponse cachedResponse = objectMapper.readValue(
-                        user.getMealRecommendationsCache(),
-                        MealRecommendationResponse.class
-                    );
-                    logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_HIT", "Retrieved meal recommendations from cache for user: " + userId);
-                    return cachedResponse;
-                } catch (JsonProcessingException e) {
-                    logService.logError("RECOMMENDATION_SERVICE", "Failed to deserialize cached meal recommendations", e.getMessage());
-                    // Fall through to generate new recommendations
-                }
-            }
-
-            // If no valid cache exists, generate new recommendations with auto meal type
-            MealRecommendationRequest request = new MealRecommendationRequest(LocalDateTime.now(), MealRecommendationRequest.MealType.AUTO, null);
-            return recommendMeal(userId, request);
-
-        } catch (Exception e) {
-            logService.logError("RECOMMENDATION_SERVICE", "Failed to get cached meal recommendations", e.getMessage());
-            return MealRecommendationResponse.builder()
-                    .recommendations(List.of())
-                    .reasoning("Failed to retrieve recommendations: " + e.getMessage())
-                    .build();
         }
+
+        // If no valid cache exists, generate new recommendations with auto meal type
+        MealRecommendationRequest request = new MealRecommendationRequest(LocalDateTime.now(), MealRecommendationRequest.MealType.AUTO, null);
+        return recommendMeal(userId, request);
     }
 
     /**
@@ -443,50 +408,36 @@ public class RecommendationService {
      * @return Cached or freshly generated workout recommendations
      */
     public WorkoutRecommendationResponse getCachedWorkoutRecommendations(String userId) {
-        try {
-            User user = userRepository.findById(userId).orElse(null);
-            if (user == null) {
-                return WorkoutRecommendationResponse.builder()
-                        .recommendations(List.of())
-                        .reasoning("User not found")
-                        .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Check if cache is valid (exists and not expired)
+        if (user.getWorkoutRecommendationsCache() != null &&
+            user.getWorkoutCacheExpiry() != null &&
+            LocalDateTime.now().isBefore(user.getWorkoutCacheExpiry())) {
+
+            try {
+                // Deserialize cached recommendations
+                WorkoutRecommendationResponse cachedResponse = objectMapper.readValue(
+                    user.getWorkoutRecommendationsCache(),
+                    WorkoutRecommendationResponse.class
+                );
+                logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_HIT", "Retrieved workout recommendations from cache for user: " + userId);
+                return cachedResponse;
+            } catch (JsonProcessingException e) {
+                logService.logError("RECOMMENDATION_SERVICE", "Failed to deserialize cached workout recommendations", e.getMessage());
+                // Fall through to generate new recommendations
             }
-
-            // Check if cache is valid (exists and not expired)
-            if (user.getWorkoutRecommendationsCache() != null &&
-                user.getWorkoutCacheExpiry() != null &&
-                LocalDateTime.now().isBefore(user.getWorkoutCacheExpiry())) {
-
-                try {
-                    // Deserialize cached recommendations
-                    WorkoutRecommendationResponse cachedResponse = objectMapper.readValue(
-                        user.getWorkoutRecommendationsCache(),
-                        WorkoutRecommendationResponse.class
-                    );
-                    logService.logApiCall("RECOMMENDATION_SERVICE", "CACHE_HIT", "Retrieved workout recommendations from cache for user: " + userId);
-                    return cachedResponse;
-                } catch (JsonProcessingException e) {
-                    logService.logError("RECOMMENDATION_SERVICE", "Failed to deserialize cached workout recommendations", e.getMessage());
-                    // Fall through to generate new recommendations
-                }
-            }
-
-            // If no valid cache exists, generate new recommendations with auto settings
-            WorkoutRecommendationRequest request = new WorkoutRecommendationRequest(
-                LocalDateTime.now(),
-                30, // Default 30 minutes
-                WorkoutRecommendationRequest.IntensityLevel.AUTO,
-                null
-            );
-            return recommendWorkout(userId, request);
-
-        } catch (Exception e) {
-            logService.logError("RECOMMENDATION_SERVICE", "Failed to get cached workout recommendations", e.getMessage());
-            return WorkoutRecommendationResponse.builder()
-                    .recommendations(List.of())
-                    .reasoning("Failed to retrieve recommendations: " + e.getMessage())
-                    .build();
         }
+
+        // If no valid cache exists, generate new recommendations with auto settings
+        WorkoutRecommendationRequest request = new WorkoutRecommendationRequest(
+            LocalDateTime.now(),
+            30, // Default 30 minutes
+            WorkoutRecommendationRequest.IntensityLevel.AUTO,
+            null
+        );
+        return recommendWorkout(userId, request);
     }
 
     /**

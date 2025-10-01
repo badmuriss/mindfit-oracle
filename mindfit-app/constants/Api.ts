@@ -50,6 +50,7 @@ export const API_ENDPOINTS = {
     EXERCISE_BY_ID: (userId: string, exerciseId: string | number) => `${baseUrl}/users/${userId}/exercises/${encodeURIComponent(String(exerciseId))}`,
     MEASUREMENTS: (userId: string) => `${baseUrl}/users/${userId}/measurements`,
     CHATBOT: (userId: string) => `${baseUrl}/users/${userId}/chatbot`,
+    CHATBOT_ACTIONS: (userId: string) => `${baseUrl}/users/${userId}/chatbot/actions/execute`,
     GENERATE_PROFILE: (userId: string) => `${baseUrl}/users/${userId}/generate-profile`,
     RECOMMEND_WORKOUT: (userId: string) => `${baseUrl}/users/${userId}/recommend-workout`,
     MEAL_RECOMMENDATIONS: (userId: string) => `${baseUrl}/users/${userId}/meal-recommendations`,

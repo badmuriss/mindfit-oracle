@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
@@ -7,10 +7,36 @@ import { API_ENDPOINTS } from '../../constants/Api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+type RecommendationAction = {
+  type: 'ADD_WORKOUT' | 'ADD_MEAL';
+  title: string;
+  description: string;
+  workoutData?: {
+    name: string;
+    description: string;
+    durationInMinutes: number;
+    caloriesBurnt: number;
+  };
+  mealData?: {
+    name: string;
+    calories: number;
+    carbo: number;
+    protein: number;
+    fat: number;
+  };
+};
+
+type Message = {
+  from: 'user' | 'bot';
+  text: string;
+  actions?: RecommendationAction[];
+  actionStates?: { [index: number]: 'idle' | 'loading' | 'success' | 'error' };
+};
+
 export default function AssistantScreen() {
   const { token, userId } = useUser();
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{ from: 'user' | 'bot'; text: string }[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
 
   const sendMessage = async () => {
@@ -36,12 +62,99 @@ export default function AssistantScreen() {
       }
       const data = await resp.json();
       const botText = data.response || 'Desculpe, não entendi.';
-      setMessages(prev => [...prev, { from: 'bot', text: botText }]);
+      const actions = data.actions || undefined;
+
+      const botMessage: Message = {
+        from: 'bot',
+        text: botText,
+        actions,
+        actionStates: actions ? actions.reduce((acc: any, _: any, index: number) => {
+          acc[index] = 'idle';
+          return acc;
+        }, {}) : undefined
+      };
+
+      setMessages(prev => [...prev, botMessage]);
     } catch (err) {
       console.log('Chatbot error:', err);
       showMessage({ message: 'Erro ao conectar com o chatbot.', type: 'danger' });
     } finally {
       setSending(false);
+    }
+  };
+
+  const executeAction = async (messageIndex: number, actionIndex: number, action: RecommendationAction) => {
+    if (!token || !userId) {
+      showMessage({ message: 'Usuário não autenticado.', type: 'danger' });
+      return;
+    }
+
+    // Update action state to loading
+    setMessages(prev => prev.map((msg, mIndex) => {
+      if (mIndex === messageIndex && msg.actionStates) {
+        return {
+          ...msg,
+          actionStates: {
+            ...msg.actionStates,
+            [actionIndex]: 'loading'
+          }
+        };
+      }
+      return msg;
+    }));
+
+    try {
+      const resp = await fetch(API_ENDPOINTS.USERS.CHATBOT_ACTIONS(userId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(action),
+      });
+
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}`);
+      }
+
+      // Update action state to success
+      setMessages(prev => prev.map((msg, mIndex) => {
+        if (mIndex === messageIndex && msg.actionStates) {
+          return {
+            ...msg,
+            actionStates: {
+              ...msg.actionStates,
+              [actionIndex]: 'success'
+            }
+          };
+        }
+        return msg;
+      }));
+
+      const actionType = action.type === 'ADD_WORKOUT' ? 'treino' : 'refeição';
+      showMessage({
+        message: `${actionType} adicionado com sucesso!`,
+        type: 'success'
+      });
+
+    } catch (err) {
+      console.log('Action execution error:', err);
+
+      // Update action state to error
+      setMessages(prev => prev.map((msg, mIndex) => {
+        if (mIndex === messageIndex && msg.actionStates) {
+          return {
+            ...msg,
+            actionStates: {
+              ...msg.actionStates,
+              [actionIndex]: 'error'
+            }
+          };
+        }
+        return msg;
+      }));
+
+      showMessage({
+        message: 'Erro ao executar ação. Tente novamente.',
+        type: 'danger'
+      });
     }
   };
 
@@ -55,9 +168,88 @@ export default function AssistantScreen() {
       <FlatList
         data={messages}
         keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => (
-          <View style={[styles.msg, item.from === 'user' ? styles.msgUser : styles.msgBot]}>
-            <Text style={[styles.msgText, item.from === 'user' && { color: '#fff', fontWeight: '600' }]}>{item.text}</Text>
+        renderItem={({ item, index: messageIndex }) => (
+          <View>
+            <View style={[styles.msg, item.from === 'user' ? styles.msgUser : styles.msgBot]}>
+              <Text style={[styles.msgText, item.from === 'user' && { color: '#fff', fontWeight: '600' }]}>{item.text}</Text>
+            </View>
+            {item.from === 'bot' && item.actions && item.actions.length > 0 && (
+              <View style={styles.actionsContainer}>
+                {item.actions.map((action, actionIndex) => {
+                  const actionState = item.actionStates?.[actionIndex] || 'idle';
+                  const isWorkout = action.type === 'ADD_WORKOUT';
+                  const data = isWorkout ? action.workoutData : action.mealData;
+
+                  return (
+                    <View key={actionIndex} style={styles.actionCard}>
+                      <View style={styles.actionHeader}>
+                        <MaterialCommunityIcons
+                          name={isWorkout ? "dumbbell" : "food"}
+                          size={24}
+                          color={isWorkout ? "#22c55e" : "#f59e0b"}
+                        />
+                        <Text style={styles.actionTitle}>{action.title}</Text>
+                      </View>
+
+                      <Text style={styles.actionDescription}>{action.description}</Text>
+
+                      {data && (
+                        <View style={styles.actionData}>
+                          <Text style={styles.actionDataTitle}>{data.name}</Text>
+                          <View style={styles.actionDataRow}>
+                            {isWorkout ? (
+                              <>
+                                <Text style={styles.actionDataText}>⏱️ {action.workoutData?.durationInMinutes} min</Text>
+                                <Text style={styles.actionDataText}>🔥 {action.workoutData?.caloriesBurnt} kcal</Text>
+                              </>
+                            ) : (
+                              <>
+                                <Text style={styles.actionDataText}>🔥 {action.mealData?.calories} kcal</Text>
+                                <Text style={styles.actionDataText}>C: {action.mealData?.carbo}g</Text>
+                                <Text style={styles.actionDataText}>P: {action.mealData?.protein}g</Text>
+                                <Text style={styles.actionDataText}>G: {action.mealData?.fat}g</Text>
+                              </>
+                            )}
+                          </View>
+                        </View>
+                      )}
+
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          actionState === 'success' && styles.actionButtonSuccess,
+                          actionState === 'error' && styles.actionButtonError,
+                          actionState === 'loading' && styles.actionButtonLoading
+                        ]}
+                        onPress={() => executeAction(messageIndex, actionIndex, action)}
+                        disabled={actionState === 'loading' || actionState === 'success'}
+                      >
+                        {actionState === 'loading' ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : actionState === 'success' ? (
+                          <>
+                            <MaterialCommunityIcons name="check" size={18} color="#fff" />
+                            <Text style={styles.actionButtonText}>Adicionado!</Text>
+                          </>
+                        ) : actionState === 'error' ? (
+                          <>
+                            <MaterialCommunityIcons name="refresh" size={18} color="#fff" />
+                            <Text style={styles.actionButtonText}>Tentar Novamente</Text>
+                          </>
+                        ) : (
+                          <>
+                            <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                            <Text style={styles.actionButtonText}>
+                              {isWorkout ? 'Adicionar aos Treinos' : 'Adicionar às Refeições'}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
         contentContainerStyle={[styles.messagesList, messages.length === 0 && { justifyContent: 'center', alignItems: 'center' }]}
@@ -226,10 +418,99 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  msgText: { 
+  msgText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#0f172a',
     fontWeight: '500',
+  },
+  // Action styles
+  actionsContainer: {
+    marginVertical: 12,
+    gap: 12,
+  },
+  actionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginLeft: 20,
+    marginRight: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  actionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginLeft: 12,
+    flex: 1,
+  },
+  actionDescription: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  actionData: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  actionDataTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  actionDataRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  actionDataText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  actionButtonSuccess: {
+    backgroundColor: '#22c55e',
+  },
+  actionButtonError: {
+    backgroundColor: '#ef4444',
+  },
+  actionButtonLoading: {
+    backgroundColor: '#64748b',
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

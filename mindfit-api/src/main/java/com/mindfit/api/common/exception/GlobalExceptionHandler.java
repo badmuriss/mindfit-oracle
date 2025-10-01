@@ -201,6 +201,36 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+    @ExceptionHandler(RecommendationException.class)
+    public ResponseEntity<ErrorResponse> handleRecommendationException(
+            RecommendationException ex, HttpServletRequest request) {
+        logService.logError("RECOMMENDATION_ERROR", ex.getClass().getSimpleName(), ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.of(
+                ex.getMessage(),
+                "RECOMMENDATION_ERROR",
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(JsonParsingException.class)
+    public ResponseEntity<ErrorResponse> handleJsonParsingException(
+            JsonParsingException ex, HttpServletRequest request) {
+        logService.logError("JSON_PARSING_ERROR", ex.getClass().getSimpleName(), ex.getMessage());
+
+        ErrorResponse error = ErrorResponse.of(
+                "Unable to parse AI response. Please try again.",
+                "JSON_PARSING_ERROR",
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(
             Exception ex, HttpServletRequest request) {

@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { showMessage } from 'react-native-flash-message';
+import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../../components/UserContext';
 import { API_ENDPOINTS } from '../../constants/Api';
 import { nowUTC, localTimeAsUTC } from '../../utils/dateUtils';
@@ -239,10 +240,13 @@ export default function NutritionScreen() {
       const data = await response.json();
       setRecommendations(data.recommendations || []);
       setShowRecommendations(true);
-      showMessage({
-        message: 'Novas sugestões de refeições geradas!',
-        type: 'success'
-      });
+
+      if (data.recommendations && data.recommendations.length > 0) {
+        showMessage({
+          message: 'Novas sugestões de refeições geradas!',
+          type: 'success'
+        });
+      }
     } catch (error) {
       console.error('Error generating new meal recommendations:', error);
 
@@ -272,6 +276,13 @@ export default function NutritionScreen() {
   useEffect(() => {
     loadMeals(selectedDate);
   }, [loadMeals, selectedDate]);
+
+  // Refetch meals when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadMeals(selectedDate);
+    }, [loadMeals, selectedDate])
+  );
 
   const openCreate = () => {
     setIsEditing(false);
@@ -511,6 +522,12 @@ export default function NutritionScreen() {
     </View>
   );
 
+  // Calculate total daily calories
+  const totalCalories = meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+  const totalCarbs = meals.reduce((sum, meal) => sum + (meal.carbo || 0), 0);
+  const totalProtein = meals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
+  const totalFat = meals.reduce((sum, meal) => sum + (meal.fat || 0), 0);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -519,6 +536,39 @@ export default function NutritionScreen() {
         <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
           <Text style={styles.addBtnText}>+ Nova</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Daily Calories Counter */}
+      <View style={styles.caloriesCard}>
+        <View style={styles.caloriesHeader}>
+          <MaterialCommunityIcons name="fire" size={28} color="#ef4444" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.caloriesLabel}>Total do Dia</Text>
+            <Text style={styles.caloriesValue}>{totalCalories.toLocaleString('pt-BR')} kcal</Text>
+          </View>
+        </View>
+        {(totalCarbs > 0 || totalProtein > 0 || totalFat > 0) && (
+          <View style={styles.macrosSummary}>
+            {totalCarbs > 0 && (
+              <View style={styles.macroItem}>
+                <Text style={styles.macroLabel}>Carboidratos</Text>
+                <Text style={styles.macroValue}>{totalCarbs.toFixed(1)}g</Text>
+              </View>
+            )}
+            {totalProtein > 0 && (
+              <View style={styles.macroItem}>
+                <Text style={styles.macroLabel}>Proteínas</Text>
+                <Text style={styles.macroValue}>{totalProtein.toFixed(1)}g</Text>
+              </View>
+            )}
+            {totalFat > 0 && (
+              <View style={styles.macroItem}>
+                <Text style={styles.macroLabel}>Gorduras</Text>
+                <Text style={styles.macroValue}>{totalFat.toFixed(1)}g</Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Day Navigation */}
@@ -713,40 +763,67 @@ export default function NutritionScreen() {
                       </View>
                     )}
 
-                    {/* Recommendation Results */}
-                    {!loadingRecommendations && showRecommendations && recommendations.length > 0 && (
-                      <View style={styles.recommendationsContainer}>
-                        {recommendations.map((rec, index) => (
-                          <TouchableOpacity
-                            key={index}
-                            style={styles.recommendationCard}
-                            onPress={() => applyRecommendation(rec)}
-                          >
-                            <Text style={styles.recommendationName}>{rec.name}</Text>
-                            <Text style={styles.recommendationDescription}>
-                              {rec.description}
+                    {/* Recommendation Results or Empty State */}
+                    {!loadingRecommendations && showRecommendations && (
+                      <>
+                        {recommendations.length > 0 ? (
+                          <View style={styles.recommendationsContainer}>
+                            {recommendations.map((rec, index) => (
+                              <TouchableOpacity
+                                key={index}
+                                style={styles.recommendationCard}
+                                onPress={() => applyRecommendation(rec)}
+                              >
+                                <Text style={styles.recommendationName}>{rec.name}</Text>
+                                <Text style={styles.recommendationDescription}>
+                                  {rec.description}
+                                </Text>
+                                <View style={styles.macroRow}>
+                                  <Text style={styles.macroText}>Cal: {rec.estimatedCalories}</Text>
+                                  <Text style={styles.macroText}>C: {rec.estimatedCarbs}g</Text>
+                                  <Text style={styles.macroText}>P: {rec.estimatedProtein}g</Text>
+                                  <Text style={styles.macroText}>G: {rec.estimatedFat}g</Text>
+                                </View>
+                                {rec.suitabilityReason && (
+                                  <Text style={styles.recommendationReason}>
+                                    💡 {rec.suitabilityReason}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        ) : (
+                          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                            <TouchableOpacity
+                              style={styles.refreshButton}
+                              onPress={getMealRecommendations}
+                              disabled={loadingRecommendations}
+                            >
+                              <MaterialCommunityIcons name="refresh" size={16} color="#0ea5e9" />
+                              <Text style={styles.refreshButtonText}>Gerar Recomendações</Text>
+                            </TouchableOpacity>
+                            <MaterialCommunityIcons name="silverware-fork-knife" size={64} color="#cbd5e1" style={{ marginTop: 16 }} />
+                            <Text style={{
+                              color: '#64748b',
+                              marginTop: 16,
+                              textAlign: 'center',
+                              fontSize: 16,
+                              fontWeight: '700',
+                            }}>
+                              {recommendationError || 'Nenhuma recomendação disponível'}
                             </Text>
-                            <View style={styles.macroRow}>
-                              <Text style={styles.macroText}>Cal: {rec.estimatedCalories}</Text>
-                              <Text style={styles.macroText}>C: {rec.estimatedCarbs}g</Text>
-                              <Text style={styles.macroText}>P: {rec.estimatedProtein}g</Text>
-                              <Text style={styles.macroText}>G: {rec.estimatedFat}g</Text>
-                            </View>
-                            {rec.suitabilityReason && (
-                              <Text style={styles.recommendationReason}>
-                                💡 {rec.suitabilityReason}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-
-                    {!loadingRecommendations && recommendationError && (
-                      <View style={styles.errorContainer}>
-                        <MaterialCommunityIcons name="alert-circle" size={24} color="#ef4444" />
-                        <Text style={styles.errorText}>{recommendationError}</Text>
-                      </View>
+                            <Text style={{
+                              color: '#94a3b8',
+                              marginTop: 8,
+                              textAlign: 'center',
+                              fontSize: 14,
+                              fontWeight: '500',
+                            }}>
+                              Toque em gerar para obter sugestões personalizadas
+                            </Text>
+                          </View>
+                        )}
+                      </>
                     )}
                   </View>
                 </>
@@ -1420,6 +1497,68 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontWeight: '600',
     flex: 1,
+  },
+  // Daily Calories Counter styles
+  caloriesCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  caloriesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  caloriesLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    letterSpacing: 0.25,
+  },
+  caloriesValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: -1,
+    marginTop: 4,
+  },
+  macrosSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    gap: 12,
+  },
+  macroItem: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  macroLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  macroValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#22c55e',
+    letterSpacing: -0.5,
   },
   // Day Navigation styles
   dayNavigation: {
