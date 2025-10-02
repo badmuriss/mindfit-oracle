@@ -1,6 +1,6 @@
 # MindFit - Complete Fitness Management Platform
 
-A comprehensive full-stack fitness management platform with AI-powered features, built with Spring Boot, Angular, Expo/React Native Web, and MongoDB.
+A comprehensive full-stack fitness management platform with AI-powered features, built with Spring Boot, Angular, Expo/React Native Web, and Oracle Database.
 
 ## 🌟 Features
 
@@ -26,7 +26,7 @@ A comprehensive full-stack fitness management platform with AI-powered features,
 
 ### Backend (Spring Boot API)
 - **Framework**: Spring Boot 3.5.4 with Java 21
-- **Database**: MongoDB with Spring Data
+- **Database**: Oracle Database XE with Spring Data JPA
 - **Security**: JWT-based authentication with role-based access control
 - **AI Integration**: OpenAI GPT integration for intelligent features
 - **API Documentation**: Swagger/OpenAPI 3.0
@@ -43,8 +43,8 @@ A comprehensive full-stack fitness management platform with AI-powered features,
 - **Authentication**: JWT-based auth with route guards
 
 ### Infrastructure
-- **Database**: MongoDB 7.0 with authentication
-- **Containerization**: Docker & Docker Compose
+- **Database**: Oracle Database XE 21c
+- **Containerization**: Docker & Docker Compose (optional)
 - **Reverse Proxy**: Nginx for frontend serving
 - **Development**: Hot reload support for both frontend and backend
 
@@ -65,10 +65,9 @@ Create a `.env` file in the root directory to customize settings:
 
 ```env
 # Database Configuration
-MONGO_ROOT_USERNAME=root
-MONGO_ROOT_PASSWORD=password
-MONGO_INITDB_DATABASE=mindfit
-MONGO_URI=mongodb://root:password@mongo:27017/mindfit?authSource=admin
+SPRING_DATASOURCE_URL=jdbc:oracle:thin:@localhost:1521/XEPDB1
+SPRING_DATASOURCE_USERNAME=mindfit
+SPRING_DATASOURCE_PASSWORD=mindfit
 
 # JWT Configuration
 JWT_SECRET=mySecretKeyForDevelopmentPleaseChangeInProduction123456789012345678901234567890
@@ -91,8 +90,7 @@ USDA_API_KEY=DEMO_KEY
 docker-compose up --build
 ```
 
-This will start all services:
-- **MongoDB**: Database server (internal port 27017)
+If you prefer Docker, adjust the provided compose file to point at an external Oracle XE instance. By default we run the backend against a locally installed Oracle XE and start the frontends separately:
 - **API**: Spring Boot backend (http://localhost:8088)
 - **Admin Panel**: Angular frontend (http://localhost:8082)
 - **App (Web)**: Expo/React Native Web (http://localhost:8083)
@@ -197,18 +195,18 @@ The app (web) will be available at http://localhost:19006 by default (Expo dev s
 
 ### Database Access
 ```bash
-# Connect to MongoDB container
-docker exec -it mindfit-mongo mongosh
+# Abrir um shell SQL dentro do container Oracle
+docker exec -it mindfit-oracle sqlplus mindfit/mindfit@//localhost:1521/FREE
 
-# Authenticate
-use admin
-db.auth("root", "password")
+# Alternativa usando SQLcl instalado localmente
+sqlcl mindfit/mindfit@//localhost:1521/FREE
 
-# Switch to application database
-use mindfit
+# Listar tabelas criadas pelos scripts
+SELECT table_name FROM user_tables ORDER BY table_name;
 
-# View collections
-show collections
+# Executar funções/procedures de exemplo
+SELECT fn_calculate_bmi('11111111-1111-1111-1111-111111111111') FROM dual;
+CALL sp_generate_user_consumption_report('11111111-1111-1111-1111-111111111111', :total, :burned, :net);
 ```
 
 ## 🛠 Configuration
@@ -217,7 +215,9 @@ show collections
 
 #### API Configuration
 - `SPRING_PROFILES_ACTIVE`: Set to `production` for production deployment
-- `MONGO_URI`: MongoDB connection string
+- `SPRING_DATASOURCE_URL`: Oracle JDBC connection string
+- `SPRING_DATASOURCE_USERNAME`: Oracle database user
+- `SPRING_DATASOURCE_PASSWORD`: Oracle database password
 - `JWT_SECRET`: Secret key for JWT token generation
 - `OPENAI_API_KEY`: OpenAI API key for AI features
 - `APP_CORS_ALLOWED_ORIGINS`: Allowed CORS origins
@@ -311,7 +311,7 @@ docker-compose up -d --build
 
 ### Environment-Specific Deployments
 - Update environment variables in `docker-compose.yml`
-- Configure external MongoDB if needed
+- Configure Oracle connection strings/credentials conforme o ambiente (dev/stage/prod)
 - Set up proper SSL certificates for production
 - Configure external API keys (OpenAI, etc.)
 
@@ -331,13 +331,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Common Issues
 
-#### MongoDB Connection Issues
+#### Oracle Connection Issues
 ```bash
-# Check MongoDB container logs
-docker logs mindfit-mongo
+# Verificar logs do container Oracle
+docker logs mindfit-oracle
 
-# Verify MongoDB is running
-docker ps | grep mongo
+# Validar se a porta está exposta
+docker exec mindfit-oracle lsnrctl status
+
+# Testar conexão usando sqlplus dentro do container
+docker exec -it mindfit-oracle sqlplus mindfit/mindfit@//localhost:1521/FREE
 ```
 
 #### API Startup Issues
@@ -346,7 +349,7 @@ docker ps | grep mongo
 docker logs mindfit-api
 
 # Verify environment variables
-docker exec mindfit-api env | grep -E "(MONGO_URI|JWT_SECRET|OPENAI_API_KEY)"
+docker exec mindfit-api env | grep -E "(SPRING_DATASOURCE_URL|JWT_SECRET|OPENAI_API_KEY)"
 ```
 
 #### Frontend Build Issues
@@ -365,9 +368,9 @@ docker-compose up --build mindfit-admin-panel
 
 ### Logs and Monitoring
 - API logs: `docker logs mindfit-api`
-- Database logs: `docker logs mindfit-mongo`
+- Database logs: `docker logs mindfit-oracle`
 - Frontend logs: `docker logs mindfit-admin-panel`
-- System logs available through the admin panel at `/logs`
+- System logs available através do painel administrativo em `/logs`
 
 ## 📞 Support
 

@@ -12,7 +12,7 @@ public class RateLimitExceededException extends RuntimeException {
     public RateLimitExceededException(String message, String userFriendlyMessage) {
         super(message);
         this.userFriendlyMessage = userFriendlyMessage;
-        this.retryAfterSeconds = 3600; // Default to 1 hour
+    this.retryAfterSeconds = 3600; // padrão de 1 hora
     }
 
     public RateLimitExceededException(String message, String userFriendlyMessage, long retryAfterSeconds) {

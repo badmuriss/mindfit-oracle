@@ -1,33 +1,47 @@
 package com.mindfit.api.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.CreationTimestamp;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.LocalDateTime;
 
 @Data
-@Document(collection = "exercise_registers")
+@Entity
+@Table(name = "exercise_registers")
 public class ExerciseRegister {
-    
+
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
-    
-    @Indexed
+
+    @Column(name = "user_id", length = 36, nullable = false)
     private String userId;
-    
+
+    @Column(name = "name", length = 100)
     private String name;
-    
+
+    @Lob
+    @Column(name = "description")
     private String description;
-    
+
+    @Column(name = "timestamp")
     private LocalDateTime timestamp;
-    
+
+    @Column(name = "duration_in_minutes")
     private Integer durationInMinutes;
-    
+
+    @Column(name = "calories_burnt")
     private Integer caloriesBurnt;
-    
-    @CreatedDate
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }

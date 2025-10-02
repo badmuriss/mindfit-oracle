@@ -35,7 +35,7 @@ public class ApiLoggingInterceptor implements HandlerInterceptor {
             try {
                 userId = SecurityUtil.getCurrentUserId();
             } catch (Exception e) {
-                // Handle unauthenticated requests (like auth endpoints)
+                // Trata requisições sem autenticação (como endpoints de login)
                 userId = "anonymous";
             }
             

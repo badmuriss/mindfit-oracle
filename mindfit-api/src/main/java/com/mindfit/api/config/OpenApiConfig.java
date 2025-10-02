@@ -26,7 +26,7 @@ public class OpenApiConfig {
                                         .scheme("basic")))
                 .info(new Info()
                         .title("Mindfit API")
-                        .description("Spring Boot + MongoDB backend for fitness/diet system")
+                        .description("Spring Boot + Oracle backend for fitness and nutrition intelligence")
                         .version("1.0.0")
                         .license(new License()
                                 .name("MIT")

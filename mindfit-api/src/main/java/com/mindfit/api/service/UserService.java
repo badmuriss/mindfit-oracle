@@ -48,7 +48,7 @@ public class UserService {
         User targetUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
-        // Check permissions based on roles
+    // Verifica permissões de acordo com os perfis
         if (!canUpdateUser(targetUser)) {
             throw new UnauthorizedException("Insufficient permissions to update this user");
         }
@@ -68,30 +68,30 @@ public class UserService {
     private boolean canUpdateUser(User targetUser) {
         String currentUserId = SecurityUtil.getCurrentUserId();
         
-        // Users can always update themselves
+    // Usuários podem atualizar o próprio cadastro
         if (targetUser.getId().equals(currentUserId)) {
             return true;
         }
         
-        // SUPER_ADMIN users can only be updated by themselves
+    // Contas SUPER_ADMIN só podem ser alteradas pelos próprios donos
         boolean targetIsSuperAdmin = targetUser.getRoles().stream()
                 .anyMatch(role -> role.name().equals("SUPER_ADMIN"));
         if (targetIsSuperAdmin) {
             return false;
         }
         
-        // SUPER_ADMIN can update anyone except other SUPER_ADMINs
+    // SUPER_ADMIN pode alterar qualquer conta que não seja outro SUPER_ADMIN
         if (SecurityUtil.isSuperAdmin()) {
             return true;
         }
         
-        // Regular ADMIN can only update users with USER role
+    // ADMIN comum só pode alterar usuários com perfil USER
         if (SecurityUtil.isRegularAdmin()) {
             return targetUser.getRoles().stream()
                     .allMatch(role -> role.name().equals("USER"));
         }
         
-        // Regular users cannot update others
+    // Usuários sem privilégio não podem alterar terceiros
         return false;
     }
 

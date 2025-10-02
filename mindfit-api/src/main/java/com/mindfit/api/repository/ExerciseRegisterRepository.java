@@ -3,13 +3,13 @@ package com.mindfit.api.repository;
 import com.mindfit.api.model.ExerciseRegister;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 
 @Repository
-public interface ExerciseRegisterRepository extends MongoRepository<ExerciseRegister, String> {
+public interface ExerciseRegisterRepository extends JpaRepository<ExerciseRegister, String> {
     
     Page<ExerciseRegister> findByUserId(String userId, Pageable pageable);
     

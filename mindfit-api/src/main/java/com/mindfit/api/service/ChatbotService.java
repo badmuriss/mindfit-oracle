@@ -47,12 +47,12 @@ public class ChatbotService {
     private final ExerciseRegisterService exerciseRegisterService;
     private final ObjectMapper objectMapper;
     private final Map<String, Deque<String>> conversations = new ConcurrentHashMap<>();
-    private static final int MAX_TURNS = 10; // keep last 10 user-assistant exchanges
+    private static final int MAX_TURNS = 10; // mantém as últimas 10 interações usuário-assistente
 
     public ChatResponse chat(String userId, ChatRequest request) {
         Deque<String> history = conversations.computeIfAbsent(userId, k -> new ArrayDeque<>());
         
-        // Get user profile for personalization, generate if empty and first message
+    // Busca o perfil do usuário para personalizar; gera um novo se estiver vazio e for a primeira mensagem
         String userProfile = getUserProfile(userId);
         if ((userProfile == null || userProfile.trim().isEmpty()) && history.isEmpty()) {
             userProfile = generateUserProfile(userId);
@@ -71,11 +71,11 @@ public class ChatbotService {
                 "- Do not translate the user's text unless asked.\n" +
                 "- Avoid preambles and pleasantries; get straight to the point.";
 
-        // Build a rolling conversation transcript
+    // Monta o histórico da conversa
         StringBuilder convo = new StringBuilder();
         convo.append(systemPreamble).append("\n\n");
         
-        // Add user profile if available
+    // Acrescenta o perfil do usuário, se existir
         if (userProfile != null && !userProfile.trim().isEmpty()) {
             convo.append("USER PROFILE (use this information to personalize your responses):\n");
             convo.append(userProfile).append("\n\n");
@@ -87,7 +87,7 @@ public class ChatbotService {
             }
             convo.append("\n");
         }
-        // Build a Prompt with options to encourage brevity and stable language behavior
+    // Monta o prompt com parâmetros que favorecem respostas curtas e consistentes
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .temperature(0.2)
                 .maxTokens(250)
@@ -104,19 +104,19 @@ public class ChatbotService {
         org.springframework.ai.chat.model.ChatResponse aiResponse = openAiChatModel.call(prompt);
         String response = aiResponse.getResult().getOutput().getText();
 
-        // Enforce a concise response as a safety net
+    // Aplica uma camada extra para manter a resposta concisa
         String concise = trimResponse(response, 120);
 
-        // Save the new turn; each turn is stored as two entries: User and Assistant
+    // Salva a nova interação; cada turno gera duas entradas: Usuário e Assistente
         history.addLast("User: " + request.prompt());
         history.addLast("Assistant: " + concise);
 
-        // Trim history to last MAX_TURNS exchanges (2 entries per turn)
+        // Limita o histórico às últimas MAX_TURNS interações (2 entradas por turno)
         while (history.size() > MAX_TURNS * 2) {
-            history.pollFirst(); // remove oldest entry
+            history.pollFirst(); // remove a entrada mais antiga
         }
 
-        // Detect if the user is asking for recommendations and generate actions
+        // Detecta solicitações de recomendação e gera ações correspondentes
         List<RecommendationAction> actions = detectAndGenerateRecommendations(userId, request.prompt(), concise);
 
         return new ChatResponse(concise, actions);
@@ -148,15 +148,15 @@ public class ChatbotService {
                 return null;
             }
             
-            // Only generate profile if user has meaningful registration data
+            // Só gera o perfil se houver dados relevantes no cadastro
             if (user.getName() == null || user.getName().trim().isEmpty()) {
                 return null;
             }
             
-            // Build comprehensive profile generation prompt
+            // Monta o prompt completo para gerar o perfil
             StringBuilder profileBuilder = new StringBuilder();
             
-            // Start with existing profile context if available
+            // Reaproveita o perfil existente, caso haja
             String existingProfile = user.getProfile();
             if (existingProfile != null && !existingProfile.trim().isEmpty()) {
                 profileBuilder.append("CURRENT USER PROFILE:\n");
@@ -166,12 +166,12 @@ public class ChatbotService {
                 profileBuilder.append("Generate a comprehensive nutrition and fitness profile based on the following user data:\n\n");
             }
             
-            // Add user basic information
+            // Acrescenta informações básicas do usuário
             profileBuilder.append("USER INFORMATION:\n");
             profileBuilder.append("Name: ").append(user.getName());
             profileBuilder.append(", Email: ").append(user.getEmail());
             
-            // Include sex for better nutrition guidance
+            // Inclui o sexo para direcionar orientações nutricionais
             if (user.getSex() != null) {
                 String sexDisplay = switch (user.getSex()) {
                     case MALE -> "Male";
@@ -181,7 +181,7 @@ public class ChatbotService {
                 profileBuilder.append(", Gender: ").append(sexDisplay);
             }
             
-            // Include age calculation from birth date
+            // Calcula idade a partir da data de nascimento
             if (user.getBirthDate() != null) {
                 int age = Period.between(user.getBirthDate(), LocalDate.now()).getYears();
                 profileBuilder.append(", Age: ").append(age).append(" years");
@@ -189,7 +189,7 @@ public class ChatbotService {
             
             profileBuilder.append("\n\n");
             
-            // Add recent measurements data
+            // Acrescenta dados recentes de medições
             try {
                 var measurements = measurementsRegisterService.findByUserId(userId, PageRequest.of(0, 10));
                 if (measurements.hasContent()) {
@@ -204,10 +204,10 @@ public class ChatbotService {
                     profileBuilder.append("\n");
                 }
             } catch (Exception e) {
-                // Continue without measurements data
+                // Prossegue mesmo sem medições
             }
             
-            // Add recent meals data with time analysis
+            // Acrescenta refeições recentes e análise de horários
             try {
                 var meals = mealRegisterService.findByUserId(userId, PageRequest.of(0, 20));
                 if (meals.hasContent()) {
@@ -223,7 +223,7 @@ public class ChatbotService {
                     });
                     profileBuilder.append("\n");
 
-                    // Analyze meal timing patterns
+                    // Orienta a análise de padrões de horário das refeições
                     profileBuilder.append("MEAL TIMING ANALYSIS:\n");
                     profileBuilder.append("Analyze the times above to identify patterns: ");
                     profileBuilder.append("What are the user's typical breakfast, lunch, dinner, and snack times? ");
@@ -231,10 +231,10 @@ public class ChatbotService {
                     profileBuilder.append("Do they have consistent meal schedules?\n\n");
                 }
             } catch (Exception e) {
-                // Continue without meals data
+                // Prossegue mesmo sem dados de refeições
             }
 
-            // Add recent exercises data with time analysis
+            // Acrescenta exercícios recentes e análise de horários
             try {
                 var exercises = exerciseRegisterService.findByUserId(userId, PageRequest.of(0, 15));
                 if (exercises.hasContent()) {
@@ -252,7 +252,7 @@ public class ChatbotService {
                     });
                     profileBuilder.append("\n");
 
-                    // Analyze exercise timing patterns
+                    // Orienta a análise de padrões de horário dos treinos
                     profileBuilder.append("EXERCISE TIMING ANALYSIS:\n");
                     profileBuilder.append("Analyze the workout times above to identify patterns: ");
                     profileBuilder.append("Is this user a morning, afternoon, or evening exerciser? ");
@@ -260,15 +260,15 @@ public class ChatbotService {
                     profileBuilder.append("Do they prefer consistent workout schedules or vary their timing?\n\n");
                 }
             } catch (Exception e) {
-                // Continue without exercise data
+                // Prossegue mesmo sem dados de exercícios
             }
             
-            // Add the new observations
+            // Acrescenta as novas observações
             profileBuilder.append("NEW OBSERVATIONS:\n");
             profileBuilder.append(observations);
             profileBuilder.append("\n\n");
             
-            // Instructions for profile generation
+            // Define instruções para geração do perfil
             profileBuilder.append("INSTRUCTIONS:\n");
             profileBuilder.append("Generate a personalized nutrition and fitness profile (max 250 words) that includes:\n");
             profileBuilder.append("- Dietary recommendations based on user's preferences and restrictions\n");
@@ -296,7 +296,7 @@ public class ChatbotService {
             org.springframework.ai.chat.model.ChatResponse aiResponse = openAiChatModel.call(prompt);
             String generatedProfile = aiResponse.getResult().getOutput().getText();
             
-            // Save the generated profile to the user
+            // Salva o perfil gerado no cadastro do usuário
             user.setProfile(generatedProfile);
             userRepository.save(user);
             
@@ -324,12 +324,12 @@ public class ChatbotService {
 
     private List<RecommendationAction> detectAndGenerateRecommendations(String userId, String userPrompt, String aiResponse) {
         try {
-            // Use AI to detect intent and generate recommendations
+            // Usa a IA para detectar intenção e gerar recomendações
             String intentResponse = detectIntentWithAI(userPrompt);
 
-            // Check if response contains JSON (indicates recommendation intent)
+            // Verifica se a resposta contém JSON (sinal de intenção por recomendação)
             if (intentResponse != null && intentResponse.trim().startsWith("{")) {
-                // Parse the intent response to determine type
+                // Faz o parse da resposta para identificar o tipo
                 IntentDetectionResult intent = parseIntentDetection(intentResponse);
 
                 if (intent != null) {
@@ -341,7 +341,7 @@ public class ChatbotService {
                 }
             }
 
-            return null; // No recommendations detected
+            return null; // Nenhuma recomendação identificada
         } catch (Exception e) {
             logService.logError("CHATBOT_SERVICE", "Failed to generate recommendations", e.getMessage());
             return null;
@@ -400,7 +400,7 @@ public class ChatbotService {
         }
     }
 
-    // Helper record for intent detection
+    // Registro auxiliar para mapear a intenção detectada
     private record IntentDetectionResult(String intentType) {}
 
     private List<RecommendationAction> generateWorkoutRecommendations(String userId, String userPrompt) {
@@ -456,7 +456,7 @@ public class ChatbotService {
         prompt.append("Gere 1-2 recomendações específicas de treino com base nesta solicitação do usuário: \"")
               .append(userPrompt).append("\"\n\n");
 
-        // Add user profile context if available
+        // Acrescenta o perfil do usuário, se estiver disponível
         String userProfile = getUserProfile(userId);
         if (userProfile != null && !userProfile.trim().isEmpty()) {
             prompt.append("Perfil do Usuário: ").append(userProfile).append("\n\n");
@@ -487,7 +487,7 @@ public class ChatbotService {
         prompt.append("Gere 1-2 recomendações específicas de refeição com base nesta solicitação do usuário: \"")
               .append(userPrompt).append("\"\n\n");
 
-        // Add user profile context if available
+        // Acrescenta o perfil do usuário, se estiver disponível
         String userProfile = getUserProfile(userId);
         if (userProfile != null && !userProfile.trim().isEmpty()) {
             prompt.append("Perfil do Usuário: ").append(userProfile).append("\n\n");
@@ -520,11 +520,11 @@ public class ChatbotService {
 
     private List<RecommendationAction> parseWorkoutRecommendations(String jsonResponse) {
         try {
-            // Extract JSON from response (in case there's extra text)
+            // Extrai o JSON da resposta (caso haja texto adicional)
             String json = extractJson(jsonResponse);
             if (json == null) return null;
 
-            // Parse JSON array into list of WorkoutRecommendationData
+            // Converte o array JSON para a lista de WorkoutRecommendationData
             TypeReference<List<WorkoutRecommendationData>> typeRef = new TypeReference<List<WorkoutRecommendationData>>() {};
             List<WorkoutRecommendationData> workouts = objectMapper.readValue(json, typeRef);
 
@@ -532,7 +532,7 @@ public class ChatbotService {
                 return null;
             }
 
-            // Convert each workout into a RecommendationAction
+            // Transforma cada treino em uma RecommendationAction
             List<RecommendationAction> actions = new ArrayList<>();
             for (WorkoutRecommendationData workout : workouts) {
                 RecommendationAction action = new RecommendationAction(
@@ -555,11 +555,11 @@ public class ChatbotService {
 
     private List<RecommendationAction> parseMealRecommendations(String jsonResponse) {
         try {
-            // Extract JSON from response (in case there's extra text)
+            // Extrai o JSON da resposta (caso haja texto adicional)
             String json = extractJson(jsonResponse);
             if (json == null) return null;
 
-            // Parse JSON array into list of MealRecommendationData
+            // Converte o array JSON para a lista de MealRecommendationData
             TypeReference<List<MealRecommendationData>> typeRef = new TypeReference<List<MealRecommendationData>>() {};
             List<MealRecommendationData> meals = objectMapper.readValue(json, typeRef);
 
@@ -567,7 +567,7 @@ public class ChatbotService {
                 return null;
             }
 
-            // Convert each meal into a RecommendationAction
+            // Transforma cada refeição em uma RecommendationAction
             List<RecommendationAction> actions = new ArrayList<>();
             for (MealRecommendationData meal : meals) {
                 RecommendationAction action = new RecommendationAction(
@@ -589,7 +589,7 @@ public class ChatbotService {
     }
 
     private String extractJson(String response) {
-        // Find JSON array in the response
+        // Localiza o array JSON presente na resposta
         int start = response.indexOf('[');
         int end = response.lastIndexOf(']');
 
@@ -617,7 +617,7 @@ public class ChatbotService {
 
     private void executeWorkoutAction(String userId, WorkoutRecommendationData workoutData, LocalDateTime timestamp) {
         try {
-            // Create exercise record using existing service
+            // Cria um registro de exercício utilizando o serviço existente
             var exerciseRequest = new ExerciseRegisterCreateRequest(
                 workoutData.name(),
                 workoutData.description(),
@@ -635,7 +635,7 @@ public class ChatbotService {
 
     private void executeMealAction(String userId, MealRecommendationData mealData, LocalDateTime timestamp) {
         try {
-            // Create meal record using existing service
+            // Cria um registro de refeição utilizando o serviço existente
             var mealRequest = new MealRegisterCreateRequest(
                 mealData.name(),
                 timestamp,

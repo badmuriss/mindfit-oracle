@@ -19,7 +19,7 @@ public class AgeValidator implements ConstraintValidator<ValidAge, LocalDate> {
     @Override
     public boolean isValid(LocalDate birthDate, ConstraintValidatorContext context) {
         if (birthDate == null) {
-            return true; // Let @NotNull handle null validation
+            return true; // @NotNull já trata a validação de nulos
         }
         
         LocalDate now = LocalDate.now();

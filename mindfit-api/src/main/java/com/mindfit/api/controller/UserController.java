@@ -1,12 +1,15 @@
 package com.mindfit.api.controller;
 
+import com.mindfit.api.common.exception.RateLimitExceededException;
+import com.mindfit.api.common.exception.UnauthorizedException;
 import com.mindfit.api.dto.*;
-import com.mindfit.api.service.UserService;
 import com.mindfit.api.service.ChatbotService;
 import com.mindfit.api.service.RateLimitService;
 import com.mindfit.api.service.RecommendationService;
+import com.mindfit.api.service.ReportService;
+import com.mindfit.api.service.UserService;
 import com.mindfit.api.mapper.UserMapper;
-import com.mindfit.api.common.exception.RateLimitExceededException;
+import com.mindfit.api.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +31,7 @@ public class UserController {
     private final ChatbotService chatbotService;
     private final RateLimitService rateLimitService;
     private final RecommendationService recommendationService;
+    private final ReportService reportService;
     private final UserMapper userMapper;
 
     @GetMapping
@@ -41,6 +45,15 @@ public class UserController {
     @Operation(summary = "Get user by ID")
     public UserDetailResponse getUserById(@PathVariable String id) {
         return userMapper.toDetailResponse(userService.findById(id));
+    }
+
+    @GetMapping("/{id}/consumption-report")
+    @Operation(summary = "Get aggregated consumption report computed via Oracle stored procedure")
+    public UserConsumptionReportResponse getConsumptionReport(@PathVariable String id) {
+        if (!SecurityUtil.isAdmin() && !id.equals(SecurityUtil.getCurrentUserId())) {
+            throw new UnauthorizedException("Users can only view their own consumption report");
+        }
+        return reportService.generateConsumptionReport(id);
     }
 
     @PutMapping("/{id}")
@@ -64,12 +77,12 @@ public class UserController {
             @PathVariable String id,
             @Valid @RequestBody ProfileGenerationRequest request) {
 
-        // Rate limiting: 5 profile generations per hour per user
+        // Limitação: até 5 gerações de perfil por usuário a cada hora
         if (!rateLimitService.createBucketForProfileGeneration(id).tryConsume(1)) {
             throw new RateLimitExceededException(
                 "Rate limit exceeded for user " + id,
                 "Limite de solicitações excedido. Você pode gerar até 5 vezes o perfil por hora. Tente novamente mais tarde.",
-                3600 // 1 hour in seconds
+                3600 // equivalente a 1 hora em segundos
             );
         }
 
@@ -95,12 +108,12 @@ public class UserController {
             @PathVariable String id,
             @RequestBody(required = false) MealRecommendationRequest request) {
 
-        // Rate limiting: 15 meal recommendation generations per hour per user
+        // Limitação: até 20 recomendações de refeição por usuário a cada hora
         if (!rateLimitService.createBucketForMealRecommendations(id).tryConsume(1)) {
             throw new RateLimitExceededException(
                 "Rate limit exceeded for user " + id,
                 "Limite de solicitações excedido. Você pode gerar até 20 novas recomendações de refeição por hora. Tente novamente mais tarde.",
-                3600 // 1 hour in seconds
+                3600 // equivalente a 1 hora em segundos
             );
         }
 
@@ -113,12 +126,12 @@ public class UserController {
             @PathVariable String id,
             @RequestBody(required = false) WorkoutRecommendationRequest request) {
 
-        // Rate limiting: 15 workout recommendation generations per hour per user
+        // Limitação: até 20 recomendações de treino por usuário a cada hora
         if (!rateLimitService.createBucketForWorkoutRecommendations(id).tryConsume(1)) {
             throw new RateLimitExceededException(
                 "Rate limit exceeded for user " + id,
                 "Limite de solicitações excedido. Você pode gerar até 20 novas recomendações de treino por hora. Tente novamente mais tarde.",
-                3600 // 1 hour in seconds
+                3600 // equivalente a 1 hora em segundos
             );
         }
 

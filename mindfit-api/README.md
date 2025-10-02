@@ -1,207 +1,90 @@
 # Mindfit API
 
-A Spring Boot + MongoDB backend for a fitness/diet tracking system with JWT authentication, role-based access control, and AI chatbot integration.
+Spring Boot service for the Mindfit platform, now backed by Oracle Database with PL/SQL intelligence and AI-assisted recommendations.
 
-## Features
+## Highlights
+- User, meal, exercise, measurement and log management
+- JWT authentication with role-based access control
+- Chatbot and recommendation engine with rate limiting
+- Oracle procedures/functions for analytics and alerts
+- Swagger/OpenAPI docs included out of the box
 
-- **Authentication & Authorization**: JWT-based auth with USER and ADMIN roles
-- **CRUD Operations**: Full CRUD for users, meals, exercises, measurements, and logs
-- **Role-Based Access Control**: Users can only access their own data, admins can access everything
-- **Pagination**: All GET endpoints return paginated results
-- **Rate Limiting**: Chatbot endpoint is rate-limited (20 requests/min per user)
-- **API Documentation**: Swagger/OpenAPI integration
-- **AI Integration**: OpenAI-powered chatbot
-- **Data Validation**: Comprehensive input validation
-- **Global Exception Handling**: Consistent error responses
+## Stack
+- Java 21 · Spring Boot 3.5
+- Spring Data JPA (Hibernate) + Oracle XE
+- MapStruct · Lombok · Bucket4j · Spring AI
 
-## Tech Stack
+## Local setup
+1. **Start Docker services**
+   ```bash
+   docker compose up -d
+   ```
+   This brings up Oracle XE (1521), the API (8088), admin panel (8082) and web app (8083).
 
-- **Java 21**
-- **Spring Boot 3.5.4**
-- **MongoDB** with Spring Data
-- **JWT** authentication
-- **MapStruct** for DTO mapping
-- **Bucket4j** for rate limiting
-- **Swagger/OpenAPI** for documentation
-- **Spring AI** for OpenAI integration
+2. **Environment variables** (via `.env` or shell)
+   ```properties
+   SPRING_DATASOURCE_URL=jdbc:oracle:thin:@localhost:1521/FREE
+   SPRING_DATASOURCE_USERNAME=mindfit
+   SPRING_DATASOURCE_PASSWORD=senha
+   JWT_SECRET=change-me
+   OPENAI_API_KEY=your-openai-api-key
+   ```
 
-## Quick Start
+3. **Run the API**
+   ```bash
+   mvn spring-boot:run
+   ```
 
-### Prerequisites
+4. **Useful endpoints**
+   - Swagger UI: http://localhost:8088/swagger-ui.html
+   - Health ready: http://localhost:8088/health/ready
 
-- Java 21+
-- Docker & Docker Compose
-- Maven
+## Oracle assets
+Located under `src/main/resources/db/oracle`:
 
-### 1. Start MongoDB
+| File | Purpose |
+| --- | --- |
+| `schema.sql` | Creates tables, FKs and indexes (users, registers, sensors, logs...). |
+| `seed-data.sql` | Demo data for users, meals, exercises, measurements, sensors. |
+| `plsql/functions.sql` | `fn_calculate_bmi`, `fn_format_user_profile`. |
+| `plsql/procedures.sql` | `sp_generate_user_consumption_report`, `sp_register_sensor_alert`. |
 
-```bash
-docker-compose up -d
-```
+More details: `docs/oracle/README.md` (DER, execution order, sample queries).
 
-This starts:
-- MongoDB on port 27017
-- Mongo Express on port 8081 (admin/admin)
+## Stored procedure usage
+- `ReportService` executes `sp_generate_user_consumption_report` via `SimpleJdbcCall`.
+- Endpoint `GET /users/{id}/consumption-report` exposes totals consumed/burned/net.
 
-### 2. Set Environment Variables
-
-Create a `.env` file in the project root:
-
-```properties
-MONGO_URI=mongodb://localhost:27017/mindfit
-JWT_SECRET=your-secret-key-here
-OPENAI_API_KEY=your-openai-api-key
-```
-
-### 3. Run the Application
-
-```bash
-mvn spring-boot:run
-```
-
-The API is available at `http://localhost:8080/` by default.
-
-### 4. Access API Documentation
-
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- API Docs: `http://localhost:8080/api-docs`
-
-## API Endpoints
-
-### Authentication
-- `POST /auth/user/login` - User login
-- `POST /auth/user/signup` - User signup
-- `POST /auth/admin/login` - Admin login
-- `POST /auth/admin/signup` - Admin signup (requires SUPER_ADMIN)
-
-### Users (Admin only for creation, users can manage their own)
-- `GET /users` - List all users (Admin only)
-- `GET /users/{id}` - Get user by ID
-- `POST /users` - Create user (Admin only)
-- `PUT /users/{id}` - Update user
-- `DELETE /users/{id}` - Delete user
-
-### Meal Registers
-- `GET /users/{userId}/meals` - List user's meals
-- `GET /users/{userId}/meals/{id}` - Get meal by ID
-- `POST /users/{userId}/meals` - Create meal
-- `PUT /users/{userId}/meals/{id}` - Update meal
-- `DELETE /users/{userId}/meals/{id}` - Delete meal
-
-### Exercise Registers
-- `GET /users/{userId}/exercises` - List user's exercises
-- `GET /users/{userId}/exercises/{id}` - Get exercise by ID
-- `POST /users/{userId}/exercises` - Create exercise
-- `PUT /users/{userId}/exercises/{id}` - Update exercise
-- `DELETE /users/{userId}/exercises/{id}` - Delete exercise
-
-### Measurements Registers
-- `GET /users/{userId}/measurements` - List user's measurements
-- `GET /users/{userId}/measurements/{id}` - Get measurement by ID
-- `POST /users/{userId}/measurements` - Create measurement
-- `PUT /users/{userId}/measurements/{id}` - Update measurement
-- `DELETE /users/{userId}/measurements/{id}` - Delete measurement
-
-### Logs (Admin only)
-- `GET /logs` - List all logs
-  - Optional filters: `startDate`, `endDate` as `YYYY-MM-DD`, `type` (ERROR|WARNING|INFO), `category` (string)
-- `GET /logs/{id}` - Get log by ID
-- `POST /logs` - Create log
-
-### Chatbot (Rate limited: 20 req/min)
-- `POST /users/{userId}/chatbot` - Chat with AI assistant
-- `DELETE /users/{userId}/chatbot/history` - Clear chatbot history
-
-## Authentication
-
-All endpoints except `/auth/**` require authentication. Include the JWT token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-## Data Models
-
-### User
-- `id`, `email`, `passwordHash`, `roles`, `createdAt`
-
-### MealRegister
-- `id`, `userId`, `name`, `timestamp`, `calories`, `createdAt`
-
-### ExerciseRegister
-- `id`, `userId`, `name`, `description`, `timestamp`, `duration`, `caloriesBurnt`, `createdAt`
-
-### MeasurementsRegister
-- `id`, `userId`, `weight`, `height`, `timestamp`, `createdAt`
-
-### Log
-- `id`, `type`, `category`, `name`, `stackTrace`, `timestamp`
-
-## Pagination
-
-All GET endpoints support pagination with query parameters:
-- `page` (default: 0)
-- `size` (default: 20)
-
-Response format:
-```json
-{
-  "items": [],
-  "page": 0,
-  "size": 20,
-  "total": 100
-}
-```
-
-## Error Handling
-
-All errors return a consistent format:
-```json
-{
-  "message": "Error description",
-  "error": "ERROR_CODE",
-  "status": 400,
-  "path": "/api/v1/endpoint",
-  "timestamp": "2023-01-01T12:00:00"
-}
-```
-
-## Development
-
-### Running Tests
-```bash
-mvn test
-```
-
-### Building for Production
-```bash
-mvn clean package
-```
-
-### Docker Build
-```bash
-docker build -t mindfit-api .
-```
-
-## Configuration
-
-Key configuration properties in `application.yml`:
-
+## Key configuration excerpt
 ```yaml
 spring:
-  data:
-    mongodb:
-      uri: ${MONGO_URI:mongodb://localhost:27017/mindfit}
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:oracle:thin:@localhost:1521/FREE}
+    username: ${SPRING_DATASOURCE_USERNAME:mindfit}
+    password: ${SPRING_DATASOURCE_PASSWORD:senha}
+    driver-class-name: oracle.jdbc.OracleDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    show-sql: false
 
 app:
   jwt:
-    secret: ${JWT_SECRET:mySecretKey}
-    expiration-ms: 86400000  # 24 hours
+    secret: ${JWT_SECRET:change-me}
+    expiration-ms: 86400000
 ```
 
-## License
+## Development
+```bash
+mvn test
+mvn clean package
+```
 
-MIT License
+## Useful links
+- Oracle assets: `docs/oracle/README.md`
+- Admin panel: http://localhost:8082
+- Web app: http://localhost:8083
+
+## License
+MIT

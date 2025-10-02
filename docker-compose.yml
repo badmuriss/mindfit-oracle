@@ -1,22 +1,22 @@
 services:
-  mongo:
-    image: mongo:7
-    container_name: mindfit-mongo
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: mindfit-oracle
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     environment:
-      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-mindfit}
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-oracle}
+      APP_USER: ${SPRING_DATASOURCE_USERNAME:-mindfit}
+      APP_USER_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
+    ports:
+      - "1521:1521"
     volumes:
-      - mongo_data:/data/db
+      - oracle_data:/opt/oracle/oradata
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "bash", "-c", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s \"system/$ORACLE_PASSWORD@localhost:1521/FREE\""]
+      interval: 45s
+      timeout: 15s
+      retries: 5
+      start_period: 90s
 
   api:
     build:
@@ -25,11 +25,13 @@ services:
     container_name: mindfit-api
     restart: unless-stopped
     depends_on:
-      mongo:
+      oracle:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: production
-      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/mindfit}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:oracle:thin:@oracle:1521/FREE}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-mindfit}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}
       JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentPleaseChangeInProduction123456789012345678901234567890}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:8082,http://localhost:8083}
@@ -72,4 +74,4 @@ services:
       - "8083:80"
 
 volumes:
-  mongo_data:
+  oracle_data:

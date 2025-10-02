@@ -42,7 +42,7 @@ public class AuthService {
         User user = (User) authentication.getPrincipal();
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRoles());
         
-        // Update last login date and potentially generate profile
+    // Atualiza a data do último acesso e, se necessário, dispara a geração de perfil
         updateLastLogonDate(user);
         
         return JwtResponse.of(token, user.getId(), user.getEmail(), user.getRoles());
@@ -76,15 +76,15 @@ public class AuthService {
 
         updateLastLogonDate(user);
 
-        // Create initial weight and height measurements
+        // Cria o registro inicial de peso e altura
         createInitialMeasurements(user.getId(), request);
         
-        // Generate initial profile with observations if provided
+        // Gera o perfil inicial caso haja observações fornecidas
         if (request.observations() != null && !request.observations().trim().isEmpty()) {
             try {
                 chatbotService.generateUserProfile(user.getId(), request.observations().trim());
             } catch (Exception e) {
-                // Log error but don't fail registration
+                // Registra o erro, mas não interrompe o cadastro
                 logService.logError("AUTH_SERVICE", "Failed to generate initial profile", e.getMessage());
             }
         }
@@ -111,7 +111,7 @@ public class AuthService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lastLogOn = user.getLastLogonDate();
         
-        // Check if this is first login this week
+        // Verifica se é o primeiro acesso da semana
         if (isFirstLogonThisWeek(lastLogOn, now)) {
             chatbotService.generateUserProfile(user.getId(), "");
         }
@@ -136,7 +136,7 @@ public class AuthService {
     
     private void createInitialMeasurements(String userId, UserSignupRequest request) {
         try {
-            // Create initial measurement record with both weight and height
+            // Cria um registro inicial de medições com peso e altura
             if (request.initialWeightInKG() != null || request.initialHeightInCM() != null) {
                 MeasurementsRegister measurements = new MeasurementsRegister();
 
@@ -148,7 +148,7 @@ public class AuthService {
                 measurementsRegisterRepository.save(measurements);
             }
         } catch (Exception e) {
-            // Log error but don't fail registration
+            // Registra o erro, mas não interrompe o cadastro
             logService.logError("AUTH_SERVICE", "Failed to create initial measurements", e.getMessage());
         }
     }

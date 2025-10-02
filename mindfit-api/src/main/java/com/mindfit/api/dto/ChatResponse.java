@@ -4,5 +4,5 @@ import java.util.List;
 
 public record ChatResponse(
         String response,
-        List<RecommendationAction> actions // Optional field for recommendations
+        List<RecommendationAction> actions // Campo opcional para recomendações
 ) {}

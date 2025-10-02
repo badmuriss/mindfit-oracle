@@ -234,7 +234,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(
             Exception ex, HttpServletRequest request) {
-        // Log to database with full stack trace
+        // Registra no banco incluindo todo o stack trace
         logService.logError("APPLICATION_ERROR", ex.getClass().getSimpleName(),
                            getStackTraceAsString(ex));
 

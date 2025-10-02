@@ -23,7 +23,7 @@ public record WorkoutRecommendationResponse(
 
     public record RecommendedExercise(
             String name,
-            String type, // cardio, strength, flexibility
+            String type, // cardio, força, alongamento
             Integer sets,
             Integer reps,
             Integer durationSeconds,

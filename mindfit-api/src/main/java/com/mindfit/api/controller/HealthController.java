@@ -1,8 +1,8 @@
 package com.mindfit.api.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,14 +16,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HealthController {
 
-    private final MongoTemplate mongoTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> health() {
         Map<String, Object> health = new HashMap<>();
         
         try {
-            mongoTemplate.getCollection("healthcheck").countDocuments();
+            jdbcTemplate.queryForObject("SELECT 1 FROM dual", Integer.class);
             health.put("status", "UP");
             health.put("database", "UP");
         } catch (Exception e) {
@@ -43,7 +43,7 @@ public class HealthController {
         Map<String, Object> readiness = new HashMap<>();
         
         try {
-            mongoTemplate.getCollection("healthcheck").countDocuments();
+            jdbcTemplate.queryForObject("SELECT 1 FROM dual", Integer.class);
             readiness.put("status", "READY");
             return ResponseEntity.ok(readiness);
         } catch (Exception e) {

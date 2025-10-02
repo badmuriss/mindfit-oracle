@@ -63,7 +63,7 @@ public class ExerciseRegisterService {
         ExerciseRegister exerciseRegister = exerciseRegisterMapper.toEntity(request);
         exerciseRegister.setUserId(userId);
 
-        // Set timestamp to current time if not provided
+        // Define a data/hora atual quando não for informada
         if (exerciseRegister.getTimestamp() == null) {
             exerciseRegister.setTimestamp(LocalDateTime.now());
         }

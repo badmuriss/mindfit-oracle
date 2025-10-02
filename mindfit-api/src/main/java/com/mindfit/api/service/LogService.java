@@ -106,7 +106,7 @@ public class LogService {
                 details,
                 LocalDateTime.now()
             );
-            // Create log without admin check for automated logging
+            // Cria o registro sem checagem de admin para permitir log automatizado
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
             log.error("Failed to log API call: {}", e.getMessage(), e);
@@ -122,7 +122,7 @@ public class LogService {
                 stackTrace,
                 LocalDateTime.now()
             );
-            // Create log without admin check for automated logging
+            // Cria o registro sem checagem de admin para permitir log automatizado
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
             log.error("Failed to log error: {}", e.getMessage(), e);
@@ -138,7 +138,7 @@ public class LogService {
                 details,
                 LocalDateTime.now()
             );
-            // Create log without admin check for automated logging
+            // Cria o registro sem checagem de admin para permitir log automatizado
             logRepository.save(logMapper.toEntity(request));
         } catch (Exception e) {
             log.error("Failed to log warning: {}", e.getMessage(), e);

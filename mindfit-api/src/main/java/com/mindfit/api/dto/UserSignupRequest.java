@@ -26,7 +26,7 @@ public record UserSignupRequest(
         @ValidAge(message = "Age must be between 13 and 120 years")
         LocalDate birthDate,
 
-        // Initial physical data captured during signup
+        // Dados físicos iniciais informados no cadastro
         @NotNull(message = "Initial weight is required")
         @Positive(message = "Weight must be positive")
         Double initialWeightInKG,
@@ -35,6 +35,6 @@ public record UserSignupRequest(
         @Positive(message = "Height must be positive")
         Integer initialHeightInCM,
 
-        // Free-form observations such as conditions, preferences, restrictions, etc.
+        // Observações livres como condições, preferências, restrições etc.
         String observations
 ) {}
