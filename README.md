@@ -1,251 +1,219 @@
-# MindFit - Complete Fitness Management Platform
+# MindFit - Plataforma Completa de Gestão Fitness
 
-A comprehensive full-stack fitness management platform with AI-powered features, built with Spring Boot, Angular, Expo/React Native Web, and Oracle Database.
+Uma plataforma full-stack de saúde e bem-estar com recursos de IA, construída com Spring Boot, Angular, Expo/React Native Web e Oracle Database.
 
-## 🌟 Features
+## 🌟 Funcionalidades
 
-### Core Functionality
-- **User Management**: Complete user registration, authentication, and profile management
-- **USDA Food Database**: Search and track meals using real food data from USDA with intelligent caching and rate limiting
-- **Exercise Tracking**: Record workouts, exercises, and custom fitness activities with calorie estimation
-- **Weight Tracking**: Visual weight tracking with custom SVG charts
-- **AI Assistant**: OpenAI-powered chatbot for fitness and nutrition guidance
+### Funcionalidades principais
+- **Gestão de usuários**: cadastro, autenticação e administração completa dos perfis.
+- **Base de alimentos USDA**: busca e registro de refeições usando dados oficiais do USDA, com cache inteligente e limite de requisições.
+- **Registro de exercícios**: acompanhamento de treinos, séries personalizadas e estimativa de calorias.
+- **Acompanhamento de peso**: gráficos SVG customizados para evolução corporal.
+- **Assistente IA**: chatbot com OpenAI para orientações de nutrição e treino.
 
-### AI-Powered Features
-- **Smart Chatbot**: OpenAI-powered assistant for fitness and nutrition guidance
-- **Profile Generation**: AI-generated personalized fitness profiles based on user data
-- **Intelligent Recommendations**: AI-driven meal and exercise suggestions
+### Recursos com IA
+- **Chatbot inteligente**: respostas personalizadas para dúvidas sobre nutrição e atividades físicas.
+- **Geração de perfil**: criação automática de perfis e planos personalizados baseados nos dados do usuário.
+- **Recomendações inteligentes**: sugestões de refeições e treinos com base no histórico e metas.
 
-### Admin Panel
-- **User Management**: View, create, edit, and delete user accounts with age and sex fields
-- **Data Analytics**: Comprehensive dashboard with user statistics
-- **System Logs**: Monitor application activities and user actions
-- **Content Management**: Manage system-wide content and settings
+### Painel administrativo
+- **Gestão de usuários**: leitura, criação, edição e exclusão, incluindo campos de idade e sexo.
+- **Painel analítico**: métricas de atividade e evolução dos usuários.
+- **Logs do sistema**: monitoramento de ações e eventos críticos.
+- **Gestão de conteúdo**: configuração de parâmetros globais da aplicação.
 
-## 🏗 Architecture
+## 🏗 Arquitetura
 
-### Backend (Spring Boot API)
-- **Framework**: Spring Boot 3.5.4 with Java 21
-- **Database**: Oracle Database XE with Spring Data JPA
-- **Security**: JWT-based authentication with role-based access control
-- **AI Integration**: OpenAI GPT integration for intelligent features
-- **API Documentation**: Swagger/OpenAPI 3.0
-- **Rate Limiting**: Built-in rate limiting for API protection
+### Backend (API Spring Boot)
+- **Stack**: Spring Boot 3.5.4 com Java 21.
+- **Banco de dados**: Oracle Database XE integrado via Spring Data JPA.
+- **Segurança**: autenticação baseada em JWT com controle de acesso por perfil.
+- **Integração IA**: uso do Spring AI com modelos OpenAI.
+- **Documentação de API**: Swagger/OpenAPI 3.0.
+- **Rate limiting**: proteção nativa contra abuso de endpoints.
 
-### Frontend
-- **Admin Panel (Angular 20)**: Manage users, data, and system settings
-- **App (Expo/React Native Web)**: End-user experience with USDA food database integration, custom weight charts, and AI assistant
-- **Framework**: Angular 20 with standalone components
-- **UI Library**: Angular Material + TailwindCSS for admin panel, React Native Paper for mobile app
-- **State Management**: Reactive forms and services
-- **Charts**: Custom SVG-based weight tracking charts
-- **Food Data**: USDA Food Data Central API integration with intelligent caching
-- **Authentication**: JWT-based auth with route guards
+### Frontends
+- **Painel Admin (Angular 20)**: dashboard completo para administradores.
+- **Aplicativo (Expo/React Native Web)**: experiência para usuários finais com gráficos, IA e integração USDA.
+- **UI**: Angular Material + Tailwind no admin; React Native Paper no app.
+- **Gerência de estado**: formulários reativos e services dedicados.
+- **Gráficos**: SVG customizado para acompanhamento de peso.
+- **Autenticação**: JWT com guards e interceptors.
 
-### Infrastructure
-- **Database**: Oracle Database XE 21c
-- **Containerization**: Docker & Docker Compose (optional)
-- **Reverse Proxy**: Nginx for frontend serving
-- **Development**: Hot reload support for both frontend and backend
+### Infraestrutura
+- **Banco**: Oracle Database XE 21c.
+- **Contêineres**: Docker + Docker Compose (opcional para desenvolvimento e entrega).
+- **Proxy**: Nginx servindo os frontends em modo produção.
+- **Dev Experience**: hot reload disponível para backend e frontends.
 
-## 🚀 Quick Start
+## 🚀 Guia Rápido
 
-### Prerequisites
-- Docker and Docker Compose
-- Git
+### Pré-requisitos
+- Docker e Docker Compose instalados.
+- Git configurado no ambiente.
 
-### 1. Clone the Repository
+### 1. Clonar o repositório
 ```bash
-git clone <your-repo-url>
-cd mindfit-project
+git clone https://github.com/Freitassync/mindfit-oracle.git
+cd mindfit-oracle
 ```
 
-### 2. Environment Configuration (Optional)
-Create a `.env` file in the root directory to customize settings:
+### 2. (Opcional) definir variáveis de ambiente
+Crie um arquivo `.env` na raiz para sobrescrever valores padrão:
 
 ```env
-# Database Configuration
+# Oracle Database
 SPRING_DATASOURCE_URL=jdbc:oracle:thin:@localhost:1521/XEPDB1
 SPRING_DATASOURCE_USERNAME=mindfit
 SPRING_DATASOURCE_PASSWORD=mindfit
 
-# JWT Configuration
-JWT_SECRET=mySecretKeyForDevelopmentPleaseChangeInProduction123456789012345678901234567890
+# JWT
+JWT_SECRET=troque-para-um-valor-forte
 
-# OpenAI Configuration
-OPENAI_API_KEY=your-openai-api-key-here
+# OpenAI
+OPENAI_API_KEY=sua-chave-openai
 
-# CORS Configuration
+# CORS
 APP_CORS_ALLOWED_ORIGINS=http://localhost:8082,http://localhost:8083,http://localhost:4200
 
-# Frontend/API Configuration
+# API Base URL para frontends
 API_BASE_URL=http://localhost:8088
 
-# USDA Food Data Central API Key (get free key from https://fdc.nal.usda.gov/)
+# Chave USDA Food Data Central
 USDA_API_KEY=DEMO_KEY
 ```
 
-### 3. Start the Application
+### 3. Subir com Docker Compose
 ```bash
 docker-compose up --build
 ```
 
-If you prefer Docker, adjust the provided compose file to point at an external Oracle XE instance. By default we run the backend against a locally installed Oracle XE and start the frontends separately:
-- **API**: Spring Boot backend (http://localhost:8088)
-- **Admin Panel**: Angular frontend (http://localhost:8082)
-- **App (Web)**: Expo/React Native Web (http://localhost:8083)
+Por padrão:
+- **API**: http://localhost:8088
+- **Painel Admin**: http://localhost:8082
+- **App Web (bundle estático)**: http://localhost:8083
 
-### 4. Access the Application
+Se preferir um Oracle externo, ajuste `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` no `.env` ou diretamente no compose.
 
-#### Admin Panel
-- **URL**: http://localhost:8082
-- **Default Admin Credentials**:
-  - Email: `admin@example.com`
-  - Password: `password`
-
-#### API Documentation
+### 4. Acessar os módulos
+- **Painel Admin**
+  - URL: http://localhost:8082
+  - Credenciais iniciais: `admin@example.com` / `password`
 - **Swagger UI**: http://localhost:8088/swagger-ui.html
-- **API Docs**: http://localhost:8088/api-docs
+- **Documentação JSON**: http://localhost:8088/api-docs
+- **App Web**: http://localhost:8083
 
-#### App (Web)
-- **URL**: http://localhost:8083
+## 🔐 Usuário padrão
 
-## 🔐 Default Admin Account
+Ao iniciar a API pela primeira vez, um super administrador é criado automaticamente.
+- E-mail: `admin@example.com`
+- Senha: `password`
+- Perfil: `SUPER_ADMIN`
 
-The system automatically creates a super admin account on first startup:
+> ⚠️ Altere a senha assim que possível.
 
-- **Email**: admin@example.com
-- **Password**: password
-- **Role**: SUPER_ADMIN
+## 📱 Endpoints principais
 
-**⚠️ Important**: Change the default password after first login for security.
+### Autenticação
+- `POST /auth/user/login`
+- `POST /auth/user/signup`
+- `POST /auth/admin/login`
+- `POST /auth/admin/signup`
 
-## 📱 API Endpoints
+### Usuários
+- `GET /users`
+- `GET /users/{id}`
+- `PUT /users/{id}`
+- `DELETE /users/{id}`
+- `POST /users/{id}/generate-profile`
+- `GET /users/{id}/consumption-report` *(agregado via stored procedure Oracle)*
 
-### Authentication
-- `POST /auth/user/login` - User login
-- `POST /auth/user/signup` - User registration
-- `POST /auth/admin/login` - Admin login
-- `POST /auth/admin/signup` - Admin registration (SUPER_ADMIN only)
+### Refeições
+- CRUD completo em `/users/{userId}/meals`
 
-### User Management
-- `GET /users` - List all users (Admin only)
-- `GET /users/{id}` - Get user details
-- `PUT /users/{id}` - Update user
-- `DELETE /users/{id}` - Delete user
-- `POST /users/{id}/generate-profile` - Generate profile for a user (AI)
+### Exercícios
+- CRUD completo em `/users/{userId}/exercises`
 
-### Meal Tracking (scoped to user)
-- `GET /users/{userId}/meals` - List meals (optional date range, pagination)
-- `GET /users/{userId}/meals/{id}` - Get meal by ID
-- `POST /users/{userId}/meals` - Create new meal
-- `PUT /users/{userId}/meals/{id}` - Update meal
-- `DELETE /users/{userId}/meals/{id}` - Delete meal
+### Medidas corporais
+- CRUD completo em `/users/{userId}/measurements`
 
-### Exercise Tracking (scoped to user)
-- `GET /users/{userId}/exercises` - List exercises (optional date range, pagination)
-- `GET /users/{userId}/exercises/{id}` - Get exercise by ID
-- `POST /users/{userId}/exercises` - Create new exercise
-- `PUT /users/{userId}/exercises/{id}` - Update exercise
-- `DELETE /users/{userId}/exercises/{id}` - Delete exercise
+### IA
+- `POST /users/{userId}/chatbot`
+- `DELETE /users/{userId}/chatbot/history`
 
-### Measurements (scoped to user)
-- `GET /users/{userId}/measurements` - List measurements (optional date range, pagination)
-- `GET /users/{userId}/measurements/{id}` - Get measurement by ID
-- `POST /users/{userId}/measurements` - Create new measurement
-- `PUT /users/{userId}/measurements/{id}` - Update measurement
-- `DELETE /users/{userId}/measurements/{id}` - Delete measurement
+### Logs
+- `GET /logs`
+- `POST /logs`
 
-### AI Features
-- `POST /users/{userId}/chatbot` - Chat with AI assistant
-- `DELETE /users/{userId}/chatbot/history` - Clear chatbot history
+## 🔧 Desenvolvimento local
 
-### Logging
-- `GET /logs` - Get system logs (Admin only)
-- `POST /logs` - Create log entry
-
-## 🔧 Development
-
-### Backend Development
+### API Spring Boot
 ```bash
 cd mindfit-api
 ./mvnw spring-boot:run
 ```
+A API sobe em http://localhost:8088.
 
-The API will be available at http://localhost:8088
-
-### Frontend Development
+### Painel Admin (Angular)
 ```bash
 cd mindfit-admin-panel
 npm install
 npm start
 ```
+Servido em http://localhost:4200.
 
-The admin panel will be available at http://localhost:4200
-
-### App (Web) Development
-If you want to run the Expo app locally for web:
+### App (Expo Web)
 ```bash
 cd mindfit-app
 npm install
 npm run web
 ```
+Por padrão o Expo usa http://localhost:19006; para build estático utilize o Docker Compose (porta 8083).
 
-The app (web) will be available at http://localhost:19006 by default (Expo dev server), or use `docker compose` for the production-like build at http://localhost:8083.
-
-### Database Access
+### Acesso ao Oracle
 ```bash
-# Abrir um shell SQL dentro do container Oracle
+# Shell SQL dentro do contêiner
 docker exec -it mindfit-oracle sqlplus mindfit/mindfit@//localhost:1521/FREE
 
-# Alternativa usando SQLcl instalado localmente
+# Via SQLcl instalado localmente
 sqlcl mindfit/mindfit@//localhost:1521/FREE
 
-# Listar tabelas criadas pelos scripts
+# Consultas úteis
 SELECT table_name FROM user_tables ORDER BY table_name;
-
-# Executar funções/procedures de exemplo
 SELECT fn_calculate_bmi('11111111-1111-1111-1111-111111111111') FROM dual;
 CALL sp_generate_user_consumption_report('11111111-1111-1111-1111-111111111111', :total, :burned, :net);
 ```
 
-## 🛠 Configuration
+## 🛠 Configuração
 
-### Environment Variables
+### Variáveis de ambiente
+- `SPRING_PROFILES_ACTIVE`
+- `SPRING_DATASOURCE_URL`
+- `SPRING_DATASOURCE_USERNAME`
+- `SPRING_DATASOURCE_PASSWORD`
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
+- `APP_CORS_ALLOWED_ORIGINS`
+- `LOGS_BASIC_USERNAME`
+- `LOGS_BASIC_PASSWORD`
 
-#### API Configuration
-- `SPRING_PROFILES_ACTIVE`: Set to `production` for production deployment
-- `SPRING_DATASOURCE_URL`: Oracle JDBC connection string
-- `SPRING_DATASOURCE_USERNAME`: Oracle database user
-- `SPRING_DATASOURCE_PASSWORD`: Oracle database password
-- `JWT_SECRET`: Secret key for JWT token generation
-- `OPENAI_API_KEY`: OpenAI API key for AI features
-- `APP_CORS_ALLOWED_ORIGINS`: Allowed CORS origins
-- `LOGS_BASIC_USERNAME`: Username for Basic auth on `/logs` endpoints
-- `LOGS_BASIC_PASSWORD`: Password for Basic auth on `/logs` endpoints
+### Arquivos de configuração
+- `application.yml` (perfil default)
+- Sobrescritas via variáveis em runtime.
 
-#### Admin Panel Configuration
-- `API_BASE_URL`: Base URL of the API backend
-
-### Application Properties
-The API uses different configurations for development and production profiles:
-
-- **Development**: `src/main/resources/application.yml`
-- **Production**: Environment variables override defaults
-
-## 📊 Data Models
+## 📊 Modelos de dados (exemplos JSON)
 
 ### User
 ```json
 {
   "id": "string",
   "email": "string",
-  "password": "string (hashed)",
+  "password": "hashed",
   "roles": ["USER", "ADMIN", "SUPER_ADMIN"],
   "profile": "string",
   "lastLogonDate": "datetime",
   "createdAt": "datetime",
-  "enabled": "boolean"
+  "enabled": true
 }
 ```
 
@@ -256,10 +224,10 @@ The API uses different configurations for development and production profiles:
   "userId": "string",
   "name": "string",
   "description": "string",
-  "calories": "number",
-  "protein": "number",
-  "carbs": "number",
-  "fat": "number",
+  "calories": 0,
+  "protein": 0,
+  "carbs": 0,
+  "fat": 0,
   "date": "datetime"
 }
 ```
@@ -271,8 +239,8 @@ The API uses different configurations for development and production profiles:
   "userId": "string",
   "name": "string",
   "description": "string",
-  "duration": "number",
-  "calories": "number",
+  "duration": 0,
+  "calories": 0,
   "date": "datetime"
 }
 ```
@@ -283,103 +251,86 @@ The API uses different configurations for development and production profiles:
   "id": "string",
   "userId": "string",
   "type": "string",
-  "value": "number",
+  "value": 0,
   "unit": "string",
   "date": "datetime"
 }
 ```
 
-## 🔒 Security Features
+## 🔒 Segurança
+- Autenticação via JWT.
+- Controle de acesso por papéis (USER, ADMIN, SUPER_ADMIN).
+- Senhas com hashing BCrypt.
+- CORS configurável por ambiente.
+- Rate limiting com Bucket4j.
+- Validações robustas de entrada.
+- Cabeçalhos de segurança aplicados pelo backend.
 
-- **JWT Authentication**: Secure token-based authentication
-- **Role-Based Access Control**: USER, ADMIN, SUPER_ADMIN roles
-- **Password Encryption**: BCrypt password hashing
-- **CORS Protection**: Configurable CORS settings
-- **Rate Limiting**: API rate limiting to prevent abuse
-- **Input Validation**: Comprehensive request validation
-- **Security Headers**: Standard security headers applied
+## 🚀 Deploy
 
-## 🚀 Deployment
-
-### Docker Deployment
-The application is containerized and can be deployed using Docker Compose:
-
+### Docker Compose (produção)
 ```bash
-# Production deployment
 docker-compose up -d --build
 ```
 
-### Environment-Specific Deployments
-- Update environment variables in `docker-compose.yml`
-- Configure Oracle connection strings/credentials conforme o ambiente (dev/stage/prod)
-- Set up proper SSL certificates for production
-- Configure external API keys (OpenAI, etc.)
+### Ajustes por ambiente
+- Ajuste variáveis de ambiente.
+- Configure conexões Oracle específicas por ambiente.
+- Adicione certificados TLS para produção.
+- Defina chaves externas (OpenAI, USDA etc.).
 
-## 🤝 Contributing
+## 🤝 Contribuição
+1. Fork no repositório.
+2. Branch (`git checkout -b feature/sua-funcionalidade`).
+3. Commit (`git commit -m "feat: adiciona funcionalidade"`).
+4. Push (`git push origin feature/sua-funcionalidade`).
+5. Abra um Pull Request.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📝 Licença
+Projeto licenciado sob MIT. Consulte `LICENSE` para detalhes.
 
 ## 🆘 Troubleshooting
 
-### Common Issues
-
-#### Oracle Connection Issues
+### Conexão Oracle
 ```bash
-# Verificar logs do container Oracle
 docker logs mindfit-oracle
 
-# Validar se a porta está exposta
 docker exec mindfit-oracle lsnrctl status
 
-# Testar conexão usando sqlplus dentro do container
 docker exec -it mindfit-oracle sqlplus mindfit/mindfit@//localhost:1521/FREE
 ```
 
-#### API Startup Issues
+### API não inicia
 ```bash
-# Check API container logs
 docker logs mindfit-api
 
-# Verify environment variables
-docker exec mindfit-api env | grep -E "(SPRING_DATASOURCE_URL|JWT_SECRET|OPENAI_API_KEY)"
+docker exec mindfit-api env | Select-String "SPRING_DATASOURCE" -SimpleMatch
 ```
 
-#### Frontend Build Issues
+### Build do frontend falhou
 ```bash
-# Check admin panel container logs
 docker logs mindfit-admin-panel
 
-# Rebuild frontend container
 docker-compose up --build mindfit-admin-panel
 ```
 
-#### Authentication Issues
-- Verify JWT_SECRET is set and consistent
-- Check that the super admin user was created successfully
-- Ensure API and frontend are using the same base URL
+### Problemas de autenticação
+- Confirme `JWT_SECRET` uniforme.
+- Verifique se o super admin foi criado.
+- Garanta que os frontends apontem para a mesma URL base da API.
 
-### Logs and Monitoring
-- API logs: `docker logs mindfit-api`
-- Database logs: `docker logs mindfit-oracle`
-- Frontend logs: `docker logs mindfit-admin-panel`
-- System logs available através do painel administrativo em `/logs`
+### Observabilidade
+- Logs API: `docker logs mindfit-api`
+- Logs Oracle: `docker logs mindfit-oracle`
+- Logs Frontends: `docker logs mindfit-admin-panel`
+- Monitoramento pelo painel em `/logs`
 
-## 📞 Support
-
-For support and questions:
-1. Check the troubleshooting section above
-2. Review the API documentation at http://localhost:8088/swagger-ui.html
-3. Check application logs for error details
-4. Create an issue in the repository for bugs or feature requests
+## 📞 Suporte
+1. Consulte o troubleshooting acima.
+2. Revisite o Swagger em http://localhost:8088/swagger-ui.html.
+3. Analise os logs de aplicação.
+4. Abra uma issue no repositório.
 
 ---
 
-**MindFit** - Empowering your fitness journey with intelligent technology! 💪🧠
+**MindFit** – Tecnologia inteligente fortalecendo sua jornada fitness! 💪🧠
