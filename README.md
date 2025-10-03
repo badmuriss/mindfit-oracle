@@ -46,6 +46,25 @@ Uma plataforma full-stack de saúde e bem-estar com recursos de IA, construída 
 - **Proxy**: Nginx servindo os frontends em modo produção.
 - **Dev Experience**: hot reload disponível para backend e frontends.
 
+## ⚠️ Configuração Importante
+
+### Antes de executar o projeto:
+
+1. **Portas em uso**: Se já houver um Oracle rodando na porta 1521, o projeto foi configurado para usar a porta **1522**.
+
+2. **Variáveis de ambiente**: Crie um arquivo `.env` baseado no `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Primeiro uso**: No primeiro start, o Oracle pode demorar 2-3 minutos para inicializar.
+
+### Solução de problemas comuns:
+
+- **Erro "port already in use"**: Outro serviço está usando a porta. Verifique com `netstat -an | findstr 1521`
+- **API não conecta no Oracle**: Aguarde o healthcheck mostrar `healthy` com `docker-compose ps`
+- **Tabelas não existem**: Execute `docker-compose restart api` após o Oracle estar saudável
+
 ## 🚀 Guia Rápido
 
 ### Pré-requisitos
