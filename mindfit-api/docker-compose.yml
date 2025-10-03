@@ -10,7 +10,7 @@ services:
       APP_USER: ${SPRING_DATASOURCE_USERNAME:-mindfit}
       APP_USER_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
     ports:
-      - "1521:1521"
+      - "1522:1521"
     volumes:
       - oracle_data:/opt/oracle/oradata
     healthcheck:
@@ -31,7 +31,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: production
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:oracle:thin:@oracle:1521/FREE}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:oracle:thin:@oracle:1521/XEPDB1}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-mindfit}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}

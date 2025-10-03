@@ -5,14 +5,14 @@ services:
     restart: unless-stopped
     environment:
       ORACLE_PASSWORD: ${ORACLE_PASSWORD:-oracle}
-      APP_USER: ${SPRING_DATASOURCE_USERNAME:-mindfit}
+      APP_USER: ${SPRING_DATASOURCE_USERNAME:-mindfit_app}
       APP_USER_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
     ports:
-      - "1521:1521"
+      - "1522:1521"
     volumes:
       - oracle_data:/opt/oracle/oradata
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s \"system/$ORACLE_PASSWORD@localhost:1521/FREE\""]
+      test: ["CMD", "bash", "-c", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s \"system/oracle@localhost:1521/XEPDB1\""]
       interval: 45s
       timeout: 15s
       retries: 5
@@ -29,8 +29,8 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: production
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:oracle:thin:@oracle:1521/FREE}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-mindfit}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:oracle:thin:@oracle:1521/XEPDB1}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-mindfit_app}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key}
       JWT_SECRET: ${JWT_SECRET:-mySecretKeyForDevelopmentPleaseChangeInProduction123456789012345678901234567890}
