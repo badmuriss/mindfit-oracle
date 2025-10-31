@@ -18,5 +18,6 @@ public record UserDto(
         Sex sex,
         LocalDate birthDate,
         LocalDateTime lastLogonDate,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

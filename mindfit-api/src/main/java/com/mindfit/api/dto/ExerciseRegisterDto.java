@@ -10,5 +10,6 @@ public record ExerciseRegisterDto(
         LocalDateTime timestamp,
         Integer durationInMinutes,
         Integer caloriesBurnt,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

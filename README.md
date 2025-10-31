@@ -203,6 +203,122 @@ SELECT fn_calculate_bmi('11111111-1111-1111-1111-111111111111') FROM dual;
 CALL sp_generate_user_consumption_report('11111111-1111-1111-1111-111111111111', :total, :burned, :net);
 ```
 
+## 🗄️ Database Migrations (Flyway)
+
+Este projeto utiliza **Flyway** para gerenciamento de schema do Oracle Database. As migrations são executadas automaticamente ao iniciar a aplicação.
+
+### Estrutura de Migrations
+```
+mindfit-api/src/main/resources/db/migration/
+├── V1__baseline_schema.sql           # Schema inicial completo
+├── V2__add_updated_at_columns.sql    # Adiciona colunas updated_at
+└── V3__create_updated_at_triggers.sql # Triggers Oracle para auto-update
+```
+
+### Características
+- **Auto-gerenciamento de timestamps**: Triggers Oracle atualizam automaticamente `updated_at` em modificações de registros
+- **Baseline automático**: `baseline-on-migrate: true` permite migrar bancos existentes
+- **Validação**: Flyway valida o schema no startup para garantir consistência
+- **Versionamento**: Histórico de migrations armazenado na tabela `flyway_schema_history`
+
+### Executar migrations manualmente
+```bash
+cd mindfit-api
+./mvnw flyway:migrate
+./mvnw flyway:info    # Ver status das migrations
+```
+
+## 🧪 Testes Automatizados
+
+O projeto implementa testes em múltiplas camadas:
+
+### Infraestrutura de Testes
+- **Framework**: JUnit 5 + Spring Boot Test
+- **Database**: H2 in-memory para testes (modo compatibilidade Oracle)
+- **Mocking**: Mockito para testes unitários
+- **Assertions**: AssertJ para asserções fluentes
+- **Cobertura**: JaCoCo para relatórios de code coverage
+
+### Estrutura de Testes
+```
+mindfit-api/src/test/java/
+├── AbstractIntegrationTest.java        # Classe base para testes de integração
+├── util/TestDataBuilder.java           # Builders para dados de teste
+├── repository/                         # Testes de repositórios
+│   ├── UserRepositoryTest.java
+│   ├── MealRegisterRepositoryTest.java
+│   └── ExerciseRegisterRepositoryTest.java
+└── service/                            # Testes de serviços com mocks
+    └── UserServiceTest.java
+```
+
+### Executar testes
+```bash
+cd mindfit-api
+
+# Rodar todos os testes
+./mvnw test
+
+# Rodar testes com coverage
+./mvnw clean verify
+
+# Ver relatório de coverage
+open target/site/jacoco/index.html
+```
+
+### Configuração de Testes
+- Profile de teste: `application-test.yml`
+- H2 configurado em modo Oracle para compatibilidade
+- Flyway desabilitado nos testes (usa Hibernate create-drop)
+- Cleanup automático entre testes via `@Transactional`
+
+## 🔄 CI/CD Pipeline
+
+O projeto utiliza **GitHub Actions** para integração e entrega contínua.
+
+### Workflow Principal (.github/workflows/ci.yml)
+```yaml
+Triggers:
+  - Push para master
+  - Pull Requests para master
+
+Jobs:
+  1. test-and-build
+     - Build Maven com cache
+     - Execução de todos os testes
+     - Geração de relatórios (JUnit, JaCoCo)
+     - Build de Docker images (validação)
+     - Upload de artifacts (testes, coverage)
+
+  2. security-scan
+     - OWASP Dependency Check
+     - Análise de vulnerabilidades
+
+  3. code-quality
+     - Checkstyle
+     - Análise estática de código
+
+  4. deploy-notification
+     - Confirmação de CI/CD bem-sucedido
+     - Sinal para Coolify realizar auto-deploy
+```
+
+### Coolify Auto-Deploy
+Após o CI passar com sucesso:
+1. GitHub Actions valida código, testes e build
+2. Merge para `master` é permitido apenas se CI passar
+3. **Coolify monitora push na master**
+4. **Deploy automático é acionado** pelo Coolify
+5. Aplicação é atualizada em produção
+
+### Proteção de Branch
+Recomenda-se configurar no GitHub:
+```
+Settings → Branches → Branch protection rules
+✓ Require status checks to pass before merging
+✓ Require branches to be up to date before merging
+```
+
 ## 🛠 Configuração
 
 ### Variáveis de ambiente

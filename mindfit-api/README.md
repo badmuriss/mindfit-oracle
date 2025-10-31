@@ -39,17 +39,6 @@ Spring Boot service for the Mindfit platform, now backed by Oracle Database with
    - Swagger UI: http://localhost:8088/swagger-ui.html
    - Health ready: http://localhost:8088/health/ready
 
-## Oracle assets
-Located under `src/main/resources/db/oracle`:
-
-| File | Purpose |
-| --- | --- |
-| `schema.sql` | Creates tables, FKs and indexes (users, registers, sensors, logs...). |
-| `seed-data.sql` | Demo data for users, meals, exercises, measurements, sensors. |
-| `plsql/functions.sql` | `fn_calculate_bmi`, `fn_format_user_profile`. |
-| `plsql/procedures.sql` | `sp_generate_user_consumption_report`, `sp_register_sensor_alert`. |
-
-More details: `docs/oracle/README.md` (DER, execution order, sample queries).
 
 ## Stored procedure usage
 - `ReportService` executes `sp_generate_user_consumption_report` via `SimpleJdbcCall`.

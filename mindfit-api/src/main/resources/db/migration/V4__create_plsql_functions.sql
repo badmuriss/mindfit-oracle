@@ -1,5 +1,6 @@
--- PL/SQL functions for Mindfit Oracle database
+-- PL/SQL functions for business logic
 
+-- Function to calculate BMI from latest measurements
 CREATE OR REPLACE FUNCTION fn_calculate_bmi(p_user_id IN VARCHAR2)
 RETURN NUMBER
 IS
@@ -33,6 +34,7 @@ EXCEPTION
 END fn_calculate_bmi;
 /
 
+-- Function to format user profile information
 CREATE OR REPLACE FUNCTION fn_format_user_profile(p_user_id IN VARCHAR2)
 RETURN VARCHAR2
 IS

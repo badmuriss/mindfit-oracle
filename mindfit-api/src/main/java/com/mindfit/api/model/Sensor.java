@@ -15,25 +15,22 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "measurements_registers")
-public class MeasurementsRegister {
+@Table(name = "sensors")
+public class Sensor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
 
-    @Column(name = "user_id", length = 36, nullable = false)
+    @Column(name = "user_id", length = 36)
     private String userId;
 
-    @Column(name = "weight_in_kg")
-    private Double weightInKG;
+    @Column(name = "sensor_type", length = 50, nullable = false)
+    private String sensorType;
 
-    @Column(name = "height_in_cm")
-    private Integer heightInCM;
-
-    @Column(name = "timestamp")
-    private LocalDateTime timestamp;
+    @Column(name = "location", length = 100)
+    private String location;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -44,11 +41,7 @@ public class MeasurementsRegister {
 
     @PrePersist
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        if (createdAt == null) {
-            createdAt = now;
-        }
-        updatedAt = now;
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate

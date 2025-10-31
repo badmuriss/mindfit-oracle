@@ -11,5 +11,6 @@ public record MealRegisterDto(
         Double carbo,
         Double protein,
         Double fat,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

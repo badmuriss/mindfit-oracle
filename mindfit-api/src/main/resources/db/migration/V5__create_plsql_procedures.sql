@@ -1,5 +1,6 @@
--- PL/SQL procedures for Mindfit Oracle database
+-- PL/SQL stored procedures for business operations
 
+-- Procedure to generate user calorie consumption report
 CREATE OR REPLACE PROCEDURE sp_generate_user_consumption_report(
     p_user_id        IN  VARCHAR2,
     o_total_calories OUT NUMBER,
@@ -29,6 +30,7 @@ EXCEPTION
 END sp_generate_user_consumption_report;
 /
 
+-- Procedure to register sensor reading and create alert log if threshold exceeded
 CREATE OR REPLACE PROCEDURE sp_register_sensor_alert(
     p_sensor_id      IN VARCHAR2,
     p_reading_value  IN NUMBER,

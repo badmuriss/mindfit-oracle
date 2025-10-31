@@ -1,64 +1,7 @@
--- Schema definition for Mindfit Oracle database
--- Executes safely by ignoring existing objects
+-- Baseline schema for Mindfit Oracle database
+-- Migration managed by Flyway
 
--- Helper procedure to drop a table if it exists
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE sensor_readings CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE sensors CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE user_roles CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE meal_registers CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE measurements_registers CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE exercise_registers CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE logs CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-BEGIN
-    EXECUTE IMMEDIATE 'DROP TABLE users CASCADE CONSTRAINTS';
-EXCEPTION
-    WHEN OTHERS THEN
-        IF SQLCODE != -942 THEN RAISE; END IF;
-END;
-/
-
+-- Users table
 CREATE TABLE users (
     id VARCHAR2(36) PRIMARY KEY,
     email VARCHAR2(100) UNIQUE NOT NULL,
@@ -79,6 +22,7 @@ CREATE TABLE users (
     credentials_non_expired NUMBER(1) DEFAULT 1
 );
 
+-- User roles table (many-to-many)
 CREATE TABLE user_roles (
     user_id VARCHAR2(36) NOT NULL,
     role VARCHAR2(30) NOT NULL,
@@ -86,6 +30,7 @@ CREATE TABLE user_roles (
     CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Meal registers table
 CREATE TABLE meal_registers (
     id VARCHAR2(36) PRIMARY KEY,
     user_id VARCHAR2(36) NOT NULL,
@@ -99,6 +44,7 @@ CREATE TABLE meal_registers (
     CONSTRAINT fk_meal_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Measurements registers table
 CREATE TABLE measurements_registers (
     id VARCHAR2(36) PRIMARY KEY,
     user_id VARCHAR2(36) NOT NULL,
@@ -109,6 +55,7 @@ CREATE TABLE measurements_registers (
     CONSTRAINT fk_measurements_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Exercise registers table
 CREATE TABLE exercise_registers (
     id VARCHAR2(36) PRIMARY KEY,
     user_id VARCHAR2(36) NOT NULL,
@@ -121,6 +68,7 @@ CREATE TABLE exercise_registers (
     CONSTRAINT fk_exercise_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Logs table
 CREATE TABLE logs (
     id VARCHAR2(36) PRIMARY KEY,
     type VARCHAR2(20),
@@ -130,6 +78,7 @@ CREATE TABLE logs (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Sensors table
 CREATE TABLE sensors (
     id VARCHAR2(36) PRIMARY KEY,
     user_id VARCHAR2(36),
@@ -139,6 +88,7 @@ CREATE TABLE sensors (
     CONSTRAINT fk_sensor_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- Sensor readings table
 CREATE TABLE sensor_readings (
     id VARCHAR2(36) PRIMARY KEY,
     sensor_id VARCHAR2(36) NOT NULL,
@@ -149,7 +99,8 @@ CREATE TABLE sensor_readings (
     CONSTRAINT fk_sensor_reading_sensor FOREIGN KEY (sensor_id) REFERENCES sensors(id)
 );
 
-CREATE INDEX idx_user_email ON users(email);
+-- Indexes for performance
+-- Note: users(email) already has a UNIQUE constraint which creates an index automatically
 CREATE INDEX idx_meal_user ON meal_registers(user_id);
 CREATE INDEX idx_measurements_user ON measurements_registers(user_id);
 CREATE INDEX idx_exercise_user ON exercise_registers(user_id);

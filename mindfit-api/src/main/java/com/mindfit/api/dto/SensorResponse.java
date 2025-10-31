@@ -2,12 +2,11 @@ package com.mindfit.api.dto;
 
 import java.time.LocalDateTime;
 
-public record MeasurementsRegisterDto(
+public record SensorResponse(
         String id,
         String userId,
-        Double weightInKG,
-        Integer heightInCM,
-        LocalDateTime timestamp,
+        String sensorType,
+        String location,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {}

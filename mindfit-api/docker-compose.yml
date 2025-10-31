@@ -10,7 +10,7 @@ services:
       APP_USER: ${SPRING_DATASOURCE_USERNAME:-mindfit}
       APP_USER_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-mindfit}
     ports:
-      - "1522:1521"
+      - "1521:1521"
     volumes:
       - oracle_data:/opt/oracle/oradata
     healthcheck:
