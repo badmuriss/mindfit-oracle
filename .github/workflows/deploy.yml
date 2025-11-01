@@ -47,8 +47,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Coolify - Application Deploy
-        uses: marconneves/coolify-actions@v0.0.4
-        with:
-          coolify-url: ${{ secrets.COOLIFY_URL }}
-          coolify-app-id: ${{ secrets.COOLIFY_APP_ID }}
-          coolify-token: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          curl -X POST "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_APP_ID }}&force=false" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            -H "Content-Type: application/json"
